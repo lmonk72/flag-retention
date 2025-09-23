@@ -1,0 +1,41 @@
+flag_retention.admin_config:
+  path: '/admin/config/system/flag-retention'
+  defaults:
+    _form: '\Drupal\flag_retention\Form\FlagRetentionConfigForm'
+    _title: 'Flag Retention Settings'
+  requirements:
+    _permission: 'administer flag retention'
+
+flag_retention.flag_settings:
+  path: '/admin/structure/flags/retention'
+  defaults:
+    _form: '\Drupal\flag_retention\Form\FlagRetentionFlagSettingsForm'
+    _title: 'Manage Flag Retention'
+  requirements:
+    _permission: 'administer flag retention'
+
+flag_retention.user_clear:
+  path: '/user/{user}/flag-clear'
+  defaults:
+    _form: '\Drupal\flag_retention\Form\UserFlagClearForm'
+    _title: 'Clear My Flags'
+  requirements:
+    _permission: 'clear own flags'
+    _user_is_logged_in: 'TRUE'
+    _custom_access: '\Drupal\flag_retention\Controller\FlagRetentionController::userClearAccess'
+
+flag_retention.admin_clear:
+  path: '/admin/structure/flags/{flag_id}/clear'
+  defaults:
+    _form: '\Drupal\flag_retention\Form\AdminFlagClearForm'
+    _title: 'Clear All Flags'
+  requirements:
+    _permission: 'clear all flags'
+
+flag_retention.bulk_clear:
+  path: '/admin/structure/flags/bulk-clear'
+  defaults:
+    _form: '\Drupal\flag_retention\Form\BulkFlagClearForm'
+    _title: 'Bulk Clear Flags'
+  requirements:
+    _permission: 'clear all flags'

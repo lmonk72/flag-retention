@@ -1,0 +1,11 @@
+name: 'Flag Retention'
+type: module
+description: 'Provides retention policies and clearing functionality for Flag module.'
+package: Custom
+core_version_requirement: ^10
+dependencies:
+  - flag
+  - user
+  - system
+  - datetime
+configure: flag_retention.admin_config

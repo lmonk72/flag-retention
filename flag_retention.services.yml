@@ -1,0 +1,8 @@
+services:
+  flag_retention.manager:
+    class: Drupal\flag_retention\FlagRetentionManager
+    arguments: ['@database', '@config.factory', '@flag', '@logger.factory', '@datetime.time']
+  
+  flag_retention.clearer:
+    class: Drupal\flag_retention\FlagClearer
+    arguments: ['@database', '@flag', '@logger.factory', '@datetime.time', '@messenger']

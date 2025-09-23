@@ -1,0 +1,11 @@
+flag_retention.flag_settings:
+  route_name: flag_retention.flag_settings
+  title: 'Manage Retention'
+  appears_on:
+    - entity.flag.collection
+
+flag_retention.bulk_clear:
+  route_name: flag_retention.bulk_clear
+  title: 'Bulk Clear'
+  appears_on:
+    - entity.flag.collection

@@ -1,0 +1,6 @@
+flag_retention:
+  css:
+    theme:
+      css/flag_retention.css: {}
+  dependencies:
+    - core/drupal

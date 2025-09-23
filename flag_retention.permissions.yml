@@ -1,0 +1,13 @@
+administer flag retention:
+  title: 'Administer flag retention'
+  description: 'Configure flag retention settings and manage retention policies.'
+  restrict access: TRUE
+
+clear own flags:
+  title: 'Clear own flags'
+  description: 'Allow users to clear their own flags.'
+
+clear all flags:
+  title: 'Clear all flags'
+  description: 'Allow clearing of all flags of a specific type (administrator permission).'
+  restrict access: TRUE

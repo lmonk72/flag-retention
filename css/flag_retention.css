@@ -1,0 +1,82 @@
+/**
+ * @file
+ * Styles for Flag Retention module.
+ */
+
+.flag-retention-clear-link {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #e74c3c;
+  color: white;
+  text-decoration: none;
+  border-radius: 3px;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.flag-retention-clear-link:hover {
+  background-color: #c0392b;
+  color: white;
+  text-decoration: none;
+}
+
+.flag-retention-clear-area {
+  text-align: center;
+  margin: 1em 0;
+}
+
+.flag-retention-clear-button {
+  background-color: #e74c3c !important;
+  border-color: #c0392b !important;
+}
+
+.flag-retention-clear-button:hover {
+  background-color: #c0392b !important;
+  border-color: #a93226 !important;
+}
+
+.flag-retention-summary {
+  margin-bottom: 1em;
+}
+
+.flag-retention-summary li {
+  padding: 2px 0;
+}
+
+/* Views integration styles */
+.views-field-flag-retention-clear-link {
+  text-align: center;
+}
+
+.view-display-id-page .flag-retention-clear-area {
+  background-color: #f8f9fa;
+  padding: 1em;
+  border-radius: 4px;
+  margin: 1em 0;
+}
+
+/* Block styles */
+.block-flag-retention-clear-block {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1em;
+  background-color: #ffffff;
+}
+
+.block-flag-retention-clear-block h2 {
+  margin-bottom: 0.5em;
+  color: #495057;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .flag-retention-clear-link {
+    display: block;
+    text-align: center;
+    margin: 4px 0;
+  }
+  
+  .flag-retention-clear-area {
+    margin: 0.5em 0;
+  }
+}

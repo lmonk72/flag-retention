@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * @file
+ * Flag retention module file.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function flag_retention_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.flag_retention':
+      return '<p>' . t('This module provides retention policies and clearing functionality for flags. It allows you to set automatic retention periods for different flag types and provides tools for users and administrators to clear flags.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function flag_retention_cron() {
+  $retention_manager = \Drupal::service('flag_retention.manager');
+  $retention_manager->processCronCleanup();
+}
+
+/**
+ * Implements hook_entity_operation().
+ */
+function flag_retention_entity_operation(\Drupal\Core\Entity\EntityInterface $entity) {
+  $operations = [];
+  
+  if ($entity->getEntityTypeId() === 'user' && $entity->id() > 0) {
+    $current_user = \Drupal::currentUser();
+    $config = \Drupal::config('flag_retention.settings');
+    
+    // Only show the link if user clearing is enabled and user has permission.
+    if ($config->get('enable_user_clearing') && 
+        ($current_user->hasPermission('clear own flags') || $current_user->hasPermission('clear all flags'))) {
+      
+      $operations['clear_flags'] = [
+        'title' => t('Clear flags'),
+        'url' => \Drupal\Core\Url::fromRoute('flag_retention.user_clear', ['user' => $entity->id()]),
+        'weight' => 50,
+      ];
+    }
+  }
+  
+  return $operations;
+}

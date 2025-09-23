@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * @file
+ * Install file for flag_retention module.
+ */
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Implements hook_schema().
+ */
+function flag_retention_schema() {
+  $schema = [];
+
+  $schema['flag_retention_settings'] = [
+    'description' => 'Stores retention settings for flags.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique retention setting ID.',
+      ],
+      'flag_id' => [
+        'type' => 'varchar_ascii',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The flag ID this retention setting applies to.',
+      ],
+      'retention_days' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Number of days to retain flags (0 = never delete).',
+      ],
+      'auto_clear' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Whether to automatically clear old flags via cron.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The Unix timestamp when the setting was created.',
+      ],
+      'changed' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The Unix timestamp when the setting was most recently saved.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'flag_id' => ['flag_id'],
+    ],
+    'indexes' => [
+      'auto_clear' => ['auto_clear'],
+      'retention_days' => ['retention_days'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function flag_retention_install() {
+  // Set default configuration.
+  \Drupal::configFactory()->getEditable('flag_retention.settings')
+    ->set('global_retention_days', 90)
+    ->set('enable_user_clearing', TRUE)
+    ->set('log_clearing_activity', TRUE)
+    ->set('cron_batch_size', 100)
+    ->save();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function flag_retention_uninstall() {
+  // Remove configuration.
+  \Drupal::configFactory()->getEditable('flag_retention.settings')->delete();
+}

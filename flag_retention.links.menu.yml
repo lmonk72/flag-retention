@@ -1,0 +1,20 @@
+flag_retention.admin_config:
+  title: 'Flag Retention'
+  description: 'Configure flag retention settings'
+  route_name: flag_retention.admin_config
+  parent: system.admin_config_system
+  weight: 10
+
+flag_retention.flag_settings:
+  title: 'Flag Retention Settings'
+  description: 'Manage retention settings for individual flags'
+  route_name: flag_retention.flag_settings
+  parent: entity.flag.collection
+  weight: 10
+
+flag_retention.bulk_clear:
+  title: 'Bulk Clear Flags'
+  description: 'Perform bulk flag clearing operations'
+  route_name: flag_retention.bulk_clear
+  parent: entity.flag.collection
+  weight: 20
