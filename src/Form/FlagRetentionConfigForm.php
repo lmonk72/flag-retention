@@ -111,6 +111,49 @@ class FlagRetentionConfigForm extends ConfigFormBase {
       '#size' => 30,
     ];
 
+    // Flag Access Control section
+    $form['flag_access'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Flag Access Control'),
+      '#description' => $this->t('Control which flags users can discover and clear through the flag retention system.'),
+      '#open' => FALSE,
+    ];
+
+    // Get all available flags
+    $flag_service = \Drupal::service('flag');
+    $all_flags = $flag_service->getAllFlags();
+    $enabled_flags = $config->get('enabled_flags') ?: [];
+
+    if (empty($all_flags)) {
+      $form['flag_access']['no_flags'] = [
+        '#markup' => '<p><em>' . $this->t('No flags are currently defined on this site. Create some flags first before configuring access controls.') . '</em></p>',
+      ];
+    } else {
+      $flag_options = [];
+      foreach ($all_flags as $flag_id => $flag) {
+        $flag_options[$flag_id] = $flag->label() . ' (' . $flag_id . ')';
+      }
+
+      $form['flag_access']['enabled_flags'] = [
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Enabled flags'),
+        '#description' => $this->t('Select which flags users can discover and clear. Unchecked flags will be hidden from users entirely.'),
+        '#options' => $flag_options,
+        '#default_value' => $enabled_flags,
+      ];
+
+      $form['flag_access']['flag_access_mode'] = [
+        '#type' => 'radios',
+        '#title' => $this->t('Access control mode'),
+        '#description' => $this->t('How to handle flag access control.'),
+        '#options' => [
+          'allow_all' => $this->t('Allow all flags (ignore selections above)'),
+          'allow_selected' => $this->t('Only allow selected flags'),
+        ],
+        '#default_value' => $config->get('flag_access_mode') ?: 'allow_all',
+      ];
+    }
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -120,6 +163,9 @@ class FlagRetentionConfigForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     parent::submitForm($form, $form_state);
 
+    // Process enabled_flags to remove unchecked values
+    $enabled_flags = array_filter($form_state->getValue('enabled_flags', []));
+
     $this->config('flag_retention.settings')
       ->set('global_retention_days', $form_state->getValue('global_retention_days'))
       ->set('enable_user_clearing', $form_state->getValue('enable_user_clearing'))
@@ -128,6 +174,8 @@ class FlagRetentionConfigForm extends ConfigFormBase {
       ->set('item_term_singular', $form_state->getValue('item_term_singular'))
       ->set('item_term_plural', $form_state->getValue('item_term_plural'))
       ->set('clear_action_term', $form_state->getValue('clear_action_term'))
+      ->set('enabled_flags', $enabled_flags)
+      ->set('flag_access_mode', $form_state->getValue('flag_access_mode'))
       ->save();
   }
 

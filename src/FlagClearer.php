@@ -175,9 +175,19 @@ class FlagClearer {
   /**
    * Get user's flag count.
    */
+  /**
+   * Get user flag count for allowed flags only.
+   */
   public function getUserFlagCount($user_id, $flag_id = NULL) {
     $query = $this->database->select('flagging', 'f')
       ->condition('uid', $user_id);
+
+    // Apply flag access control
+    $allowed_flags = $this->getAllowedFlags();
+    if (!empty($allowed_flags)) {
+      $query->condition('flag_id', $allowed_flags, 'IN');
+    }
+
     $query->addExpression('COUNT(f.id)', 'count');
 
     if ($flag_id) {
@@ -192,6 +202,38 @@ class FlagClearer {
       $query->addField('f', 'flag_id');
       return $query->execute()->fetchAllAssoc('flag_id');
     }
+  }
+
+  /**
+   * Get list of allowed flags based on admin configuration.
+   */
+  public function getAllowedFlags() {
+    $config = \Drupal::config('flag_retention.settings');
+    $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
+    
+    if ($access_mode === 'allow_all') {
+      // Return empty array to indicate all flags are allowed
+      return [];
+    }
+    
+    // Only allow selected flags
+    $enabled_flags = $config->get('enabled_flags') ?: [];
+    return array_values($enabled_flags);
+  }
+
+  /**
+   * Check if a specific flag is allowed to be cleared.
+   */
+  public function isFlagAllowed($flag_id) {
+    $config = \Drupal::config('flag_retention.settings');
+    $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
+    
+    if ($access_mode === 'allow_all') {
+      return TRUE;
+    }
+    
+    $enabled_flags = $config->get('enabled_flags') ?: [];
+    return in_array($flag_id, $enabled_flags);
   }
 
 }

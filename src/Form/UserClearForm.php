@@ -251,8 +251,12 @@ class UserClearForm extends FormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     // Handle single flag case
-    if ($form_state->getValue('single_flag')) {
-      return; // No validation needed for single flag
+    if ($single_flag = $form_state->getValue('single_flag')) {
+      // Check if single flag is allowed
+      if (!$this->flagClearer->isFlagAllowed($single_flag)) {
+        $form_state->setErrorByName('single_flag', $this->t('The selected flag type is not available for clearing.'));
+      }
+      return;
     }
     
     $selected_flags = array_filter($form_state->getValue('flags', []));
@@ -261,6 +265,15 @@ class UserClearForm extends FormBase {
       $config = \Drupal::config('flag_retention.settings');
       $clear_action_term = $config->get('clear_action_term') ?: 'clear';
       $form_state->setErrorByName('flags', $this->t('Please select at least one type to @action.', ['@action' => $clear_action_term]));
+      return;
+    }
+
+    // Validate that all selected flags are allowed
+    foreach ($selected_flags as $flag_id) {
+      if (!$this->flagClearer->isFlagAllowed($flag_id)) {
+        $form_state->setErrorByName('flags', $this->t('One or more selected flag types are not available for clearing.'));
+        break;
+      }
     }
   }
 
