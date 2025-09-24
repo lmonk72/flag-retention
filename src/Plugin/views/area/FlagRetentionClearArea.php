@@ -107,24 +107,34 @@ class FlagRetentionClearArea extends AreaPluginBase {
       return [];
     }
 
-    // Get user's flag count if requested.
-    $button_text = $this->options['button_text'];
-    if ($this->options['show_count']) {
-      $flag_clearer = \Drupal::service('flag_retention.clearer');
-      $flag_counts = $flag_clearer->getUserFlagCount($this->currentUser->id());
-      $total_flags = 0;
-      
-      foreach ($flag_counts as $data) {
-        $total_flags += $data->count;
-      }
-      
-      if ($total_flags > 0) {
-        $button_text .= ' (' . $total_flags . ')';
-      }
-      else {
-        // Don't show button if user has no items.
+    // Always check if user has flags, regardless of show_count setting
+    $flag_clearer = \Drupal::service('flag_retention.clearer');
+    $flag_counts = $flag_clearer->getUserFlagCount($this->currentUser->id());
+    $total_flags = 0;
+    
+    foreach ($flag_counts as $data) {
+      $total_flags += $data->count;
+    }
+    
+    // Handle display logic based on flags and view results
+    if ($total_flags === 0) {
+      // User has no flags - only show button if "Display even if view has no result" is enabled
+      if ($empty && empty($this->options['empty'])) {
+        // View is empty and "Display even if view has no result" is disabled - hide button
         return [];
       }
+      // Either view has results or "Display even if view has no result" is enabled - show button
+    } else {
+      // User has flags - respect the "Display even if view has no result" setting
+      if ($empty && empty($this->options['empty'])) {
+        return [];
+      }
+    }
+
+    // Build button text, adding count if requested
+    $button_text = $this->options['button_text'];
+    if ($this->options['show_count'] && $total_flags > 0) {
+      $button_text .= ' (' . $total_flags . ')';
     }
 
     $url = Url::fromRoute('flag_retention.user_clear', ['user' => $this->currentUser->id()]);
