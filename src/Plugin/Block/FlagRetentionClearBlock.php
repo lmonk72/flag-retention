@@ -63,9 +63,11 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
    */
   public function defaultConfiguration() {
     return [
-      'button_text' => 'Clear My Flags',
+      'button_text' => 'Clear My Items',
       'show_count' => TRUE,
       'show_summary' => TRUE,
+      'use_modal' => TRUE,
+      'button_class' => 'btn btn-secondary',
     ];
   }
 
@@ -77,14 +79,15 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
       '#type' => 'textfield',
       '#title' => $this->t('Button text'),
       '#default_value' => $this->configuration['button_text'],
-      '#description' => $this->t('The text to display on the clear button.'),
+      '#description' => $this->t('The text to display on the clear flags button.'),
+      '#required' => TRUE,
     ];
 
     $form['show_count'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Show flag count'),
       '#default_value' => $this->configuration['show_count'],
-      '#description' => $this->t('Display the total number of flags the user has.'),
+      '#description' => $this->t('Display the total number of flags the user has in the button text.'),
     ];
 
     $form['show_summary'] = [
@@ -92,6 +95,20 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
       '#title' => $this->t('Show flag summary'),
       '#default_value' => $this->configuration['show_summary'],
       '#description' => $this->t('Display a breakdown of flags by type.'),
+    ];
+
+    $form['button_class'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Button CSS classes'),
+      '#default_value' => $this->configuration['button_class'],
+      '#description' => $this->t('CSS classes to apply to the button.'),
+    ];
+
+    $form['use_modal'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Open in modal'),
+      '#default_value' => $this->configuration['use_modal'],
+      '#description' => $this->t('Open the clear form in a modal dialog instead of navigating to a new page.'),
     ];
 
     return $form;
@@ -104,6 +121,8 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     $this->configuration['button_text'] = $form_state->getValue('button_text');
     $this->configuration['show_count'] = $form_state->getValue('show_count');
     $this->configuration['show_summary'] = $form_state->getValue('show_summary');
+    $this->configuration['button_class'] = $form_state->getValue('button_class');
+    $this->configuration['use_modal'] = $form_state->getValue('use_modal');
   }
 
   /**
@@ -127,6 +146,11 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
       return $build;
     }
 
+    // Get custom terminology from configuration
+    $config = \Drupal::config('flag_retention.settings');
+    $item_term_singular = $config->get('item_term_singular') ?: 'item';
+    $item_term_plural = $config->get('item_term_plural') ?: 'items';
+
     // Show flag summary if enabled.
     if ($this->configuration['show_summary'] && !empty($flag_counts)) {
       $flag_service = \Drupal::service('flag');
@@ -135,14 +159,15 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
       foreach ($flag_counts as $flag_id => $data) {
         $flag = $flag_service->getFlagById($flag_id);
         if ($flag) {
-          $summary_items[] = $flag->label() . ': ' . $data->count;
+          $count = $data->count;
+          $summary_items[] = $flag->label() . ': ' . $count . ' ' . ($count == 1 ? $item_term_singular : $item_term_plural);
         }
       }
       
       if (!empty($summary_items)) {
         $build['summary'] = [
           '#theme' => 'item_list',
-          '#title' => $this->t('Your flags:'),
+          '#title' => $this->t('Your @items:', ['@items' => $item_term_plural]),
           '#items' => $summary_items,
           '#attributes' => ['class' => ['flag-retention-summary']],
         ];
@@ -152,7 +177,10 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     // Show total count if enabled.
     if ($this->configuration['show_count']) {
       $build['count'] = [
-        '#markup' => '<p><strong>' . $this->t('Total flags: @count', ['@count' => $total_flags]) . '</strong></p>',
+        '#markup' => '<p><strong>' . $this->t('Total @items: @count', [
+          '@items' => $total_flags == 1 ? $item_term_singular : $item_term_plural,
+          '@count' => $total_flags,
+        ]) . '</strong></p>',
       ];
     }
 
@@ -160,19 +188,41 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     $button_text = $this->configuration['button_text'];
     $url = Url::fromRoute('flag_retention.user_clear', ['user' => $this->currentUser->id()]);
     
+    $attributes = [
+      'class' => explode(' ', $this->configuration['button_class']),
+      'title' => $this->t('Clear all your @items', ['@items' => $item_term_plural]),
+    ];
+
+    $libraries = ['flag_retention/flag_retention'];
+
+    // Add modal support if enabled
+    if ($this->configuration['use_modal']) {
+      $clear_action_term = $config->get('clear_action_term') ?: 'Clear';
+      
+      $attributes['class'][] = 'use-ajax';
+      $attributes['data-dialog-type'] = 'modal';
+      $attributes['data-dialog-options'] = json_encode([
+        'width' => 600,
+        'height' => 400,
+        'title' => $this->t('@action Your @items', [
+          '@action' => ucfirst($clear_action_term),
+          '@items' => ucfirst($item_term_plural),
+        ]),
+      ]);
+      $libraries[] = 'core/drupal.dialog.ajax';
+      $libraries[] = 'flag_retention/flag_retention_modal';
+    }
+    
     $build['clear_button'] = [
       '#type' => 'link',
       '#title' => $button_text,
       '#url' => $url,
-      '#attributes' => [
-        'class' => ['button', 'button--primary', 'flag-retention-clear-button'],
-        'title' => $this->t('Clear all your flags'),
-      ],
+      '#attributes' => $attributes,
     ];
 
     $build['#cache']['contexts'][] = 'user';
     $build['#cache']['tags'][] = 'flagging_list:' . $this->currentUser->id();
-    $build['#attached']['library'][] = 'flag_retention/flag_retention';
+    $build['#attached']['library'] = $libraries;
 
     return $build;
   }

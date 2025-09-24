@@ -77,6 +77,40 @@ class FlagRetentionConfigForm extends ConfigFormBase {
       '#step' => 1,
     ];
 
+    $form['terminology'] = [
+      '#type' => 'details',
+      '#title' => $this->t('User Interface Terminology'),
+      '#description' => $this->t('Customize the terminology shown to users to better match your site\'s context.'),
+      '#open' => FALSE,
+    ];
+
+    $form['terminology']['item_term_singular'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Singular term for items'),
+      '#description' => $this->t('What to call a single flagged item (e.g., "item", "bookmark", "favorite"). Default: "item"'),
+      '#default_value' => $config->get('item_term_singular') ?: 'item',
+      '#required' => TRUE,
+      '#size' => 30,
+    ];
+
+    $form['terminology']['item_term_plural'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Plural term for items'),
+      '#description' => $this->t('What to call multiple flagged items (e.g., "items", "bookmarks", "favorites"). Default: "items"'),
+      '#default_value' => $config->get('item_term_plural') ?: 'items',
+      '#required' => TRUE,
+      '#size' => 30,
+    ];
+
+    $form['terminology']['clear_action_term'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Action term for clearing'),
+      '#description' => $this->t('The action word for clearing items (e.g., "clear", "remove", "delete"). Default: "clear"'),
+      '#default_value' => $config->get('clear_action_term') ?: 'clear',
+      '#required' => TRUE,
+      '#size' => 30,
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -91,6 +125,9 @@ class FlagRetentionConfigForm extends ConfigFormBase {
       ->set('enable_user_clearing', $form_state->getValue('enable_user_clearing'))
       ->set('log_clearing_activity', $form_state->getValue('log_clearing_activity'))
       ->set('cron_batch_size', $form_state->getValue('cron_batch_size'))
+      ->set('item_term_singular', $form_state->getValue('item_term_singular'))
+      ->set('item_term_plural', $form_state->getValue('item_term_plural'))
+      ->set('clear_action_term', $form_state->getValue('clear_action_term'))
       ->save();
   }
 

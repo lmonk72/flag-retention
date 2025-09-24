@@ -1,6 +1,24 @@
 flag_retention:
+  version: 1.x
   css:
     theme:
       css/flag_retention.css: {}
+  js:
+    js/flag_retention.js: {}
   dependencies:
+    - core/jquery
     - core/drupal
+    - core/drupalSettings
+
+flag_retention_modal:
+  version: 1.x
+  css:
+    theme:
+      css/flag_retention_modal.css: {}
+  js:
+    js/flag_retention_modal.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - core/drupal.dialog.ajax

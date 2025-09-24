@@ -57,6 +57,14 @@ class FlagRetentionClearLink extends FieldPluginBase {
    */
   public function query() {
     // This field doesn't need to add anything to the query.
+    // This is a global field.
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function clickSortable() {
+    return FALSE;
   }
 
   /**
@@ -106,13 +114,26 @@ class FlagRetentionClearLink extends FieldPluginBase {
    * {@inheritdoc}
    */
   public function render(ResultRow $values) {
+    // Try to get user from the row entity first
     $entity = $this->getEntity($values);
+    $user = NULL;
     
-    if (!$entity || $entity->getEntityTypeId() !== 'user') {
-      return '';
+    if ($entity && $entity->getEntityTypeId() === 'user') {
+      $user = $entity;
+    } elseif (isset($values->users_field_data_uid)) {
+      // Try to load user from uid field in the row
+      $user = \Drupal::entityTypeManager()->getStorage('user')->load($values->users_field_data_uid);
+    } elseif (isset($values->uid)) {
+      // Try to load user from uid field
+      $user = \Drupal::entityTypeManager()->getStorage('user')->load($values->uid);
+    } else {
+      // Fall back to current user for global field usage
+      $user = \Drupal::entityTypeManager()->getStorage('user')->load($this->currentUser->id());
     }
 
-    $user = $entity;
+    if (!$user || $user->id() == 0) {
+      return '';
+    }
     $link_type = $this->options['link_type'];
     $config = \Drupal::config('flag_retention.settings');
 

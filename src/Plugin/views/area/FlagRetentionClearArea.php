@@ -49,9 +49,10 @@ class FlagRetentionClearArea extends AreaPluginBase {
    */
   protected function defineOptions() {
     $options = parent::defineOptions();
-    $options['button_text'] = ['default' => 'Clear My Flags'];
+    $options['button_text'] = ['default' => 'Clear My Items'];
     $options['show_count'] = ['default' => TRUE];
     $options['button_class'] = ['default' => 'button button--primary'];
+    $options['use_modal'] = ['default' => TRUE];
     return $options;
   }
 
@@ -65,7 +66,8 @@ class FlagRetentionClearArea extends AreaPluginBase {
       '#type' => 'textfield',
       '#title' => $this->t('Button text'),
       '#default_value' => $this->options['button_text'],
-      '#description' => $this->t('The text to display on the button.'),
+      '#description' => $this->t('The text to display on the clear flags button.'),
+      '#required' => TRUE,
     ];
 
     $form['show_count'] = [
@@ -80,6 +82,13 @@ class FlagRetentionClearArea extends AreaPluginBase {
       '#title' => $this->t('Button CSS classes'),
       '#default_value' => $this->options['button_class'],
       '#description' => $this->t('CSS classes to apply to the button.'),
+    ];
+
+    $form['use_modal'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Open in modal'),
+      '#default_value' => $this->options['use_modal'],
+      '#description' => $this->t('Open the clear form in a modal dialog instead of navigating to a new page.'),
     ];
   }
 
@@ -113,24 +122,49 @@ class FlagRetentionClearArea extends AreaPluginBase {
         $button_text .= ' (' . $total_flags . ')';
       }
       else {
-        // Don't show button if user has no flags.
+        // Don't show button if user has no items.
         return [];
       }
     }
 
     $url = Url::fromRoute('flag_retention.user_clear', ['user' => $this->currentUser->id()]);
     
+    $attributes = [
+      'class' => explode(' ', $this->options['button_class']),
+      'title' => $this->t('Clear all your items'),
+    ];
+
+    $libraries = ['flag_retention/flag_retention'];
+
+    // Add modal support if enabled
+    if ($this->options['use_modal']) {
+      // Get custom terminology for modal title
+      $config = \Drupal::config('flag_retention.settings');
+      $item_term_plural = $config->get('item_term_plural') ?: 'items';
+      $clear_action_term = $config->get('clear_action_term') ?: 'Clear';
+      
+      $attributes['class'][] = 'use-ajax';
+      $attributes['data-dialog-type'] = 'modal';
+      $attributes['data-dialog-options'] = json_encode([
+        'width' => 600,
+        'height' => 400,
+        'title' => $this->t('@action Your @items', [
+          '@action' => ucfirst($clear_action_term),
+          '@items' => ucfirst($item_term_plural),
+        ]),
+      ]);
+      $libraries[] = 'core/drupal.dialog.ajax';
+      $libraries[] = 'flag_retention/flag_retention_modal';
+    }
+    
     return [
       '#type' => 'link',
       '#title' => $button_text,
       '#url' => $url,
-      '#attributes' => [
-        'class' => explode(' ', $this->options['button_class']),
-        'title' => $this->t('Clear all your flags'),
-      ],
+      '#attributes' => $attributes,
       '#prefix' => '<div class="flag-retention-clear-area">',
       '#suffix' => '</div>',
-      '#attached' => ['library' => ['flag_retention/flag_retention']],
+      '#attached' => ['library' => $libraries],
     ];
   }
 

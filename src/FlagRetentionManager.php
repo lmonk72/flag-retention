@@ -70,11 +70,10 @@ class FlagRetentionManager {
       ->fetchAssoc();
 
     if (!$result) {
-      // Return default settings.
-      $config = $this->configFactory->get('flag_retention.settings');
+      // Return default settings (disabled by default).
       return [
         'flag_id' => $flag_id,
-        'retention_days' => $config->get('global_retention_days'),
+        'retention_days' => 0,
         'auto_clear' => 0,
       ];
     }
@@ -194,16 +193,13 @@ class FlagRetentionManager {
     $flags = $this->flagService->getAllFlags();
     $result = [];
     
-    $config = $this->configFactory->get('flag_retention.settings');
-    $default_retention = $config->get('global_retention_days');
-    
     foreach ($flags as $flag) {
       $flag_id = $flag->id();
       $settings = $this->getRetentionSettings($flag_id);
       
       $result[$flag_id] = [
         'flag' => $flag,
-        'retention_days' => $settings['retention_days'] ?? $default_retention,
+        'retention_days' => $settings['retention_days'] ?? 0,
         'auto_clear' => $settings['auto_clear'] ?? 0,
       ];
     }

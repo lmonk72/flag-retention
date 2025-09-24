@@ -5,7 +5,9 @@
  * Flag retention module file.
  */
 
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Url;
 
 /**
  * Implements hook_help().
@@ -26,9 +28,34 @@ function flag_retention_cron() {
 }
 
 /**
+ * Implements hook_views_data().
+ */
+function flag_retention_views_data() {
+  $data = [];
+
+  $data['views']['flag_retention_clear_link'] = [
+    'title' => t('Flag Retention Clear Link'),
+    'help' => t('Displays a link to clear flags for users.'),
+    'field' => [
+      'id' => 'flag_retention_clear_link',
+    ],
+  ];
+
+  $data['views']['flag_retention_clear_area'] = [
+    'title' => t('Flag Retention Clear Area'),
+    'help' => t('Displays a clear flags button area.'),
+    'area' => [
+      'id' => 'flag_retention_clear_area',
+    ],
+  ];
+
+  return $data;
+}
+
+/**
  * Implements hook_entity_operation().
  */
-function flag_retention_entity_operation(\Drupal\Core\Entity\EntityInterface $entity) {
+function flag_retention_entity_operation(EntityInterface $entity) {
   $operations = [];
   
   if ($entity->getEntityTypeId() === 'user' && $entity->id() > 0) {
@@ -41,7 +68,7 @@ function flag_retention_entity_operation(\Drupal\Core\Entity\EntityInterface $en
       
       $operations['clear_flags'] = [
         'title' => t('Clear flags'),
-        'url' => \Drupal\Core\Url::fromRoute('flag_retention.user_clear', ['user' => $entity->id()]),
+        'url' => Url::fromRoute('flag_retention.user_clear', ['user' => $entity->id()]),
         'weight' => 50,
       ];
     }

@@ -6,7 +6,7 @@ flag_retention.admin_config:
   weight: 10
 
 flag_retention.flag_settings:
-  title: 'Flag Retention Settings'
+  title: 'Retention Settings'
   description: 'Manage retention settings for individual flags'
   route_name: flag_retention.flag_settings
   parent: entity.flag.collection

@@ -17,7 +17,7 @@ flag_retention.flag_settings:
 flag_retention.user_clear:
   path: '/user/{user}/flag-clear'
   defaults:
-    _form: '\Drupal\flag_retention\Form\UserFlagClearForm'
+    _form: '\Drupal\flag_retention\Form\UserClearForm'
     _title: 'Clear My Flags'
   requirements:
     _permission: 'clear own flags'

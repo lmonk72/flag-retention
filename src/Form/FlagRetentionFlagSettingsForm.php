@@ -47,7 +47,10 @@ class FlagRetentionFlagSettingsForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['description'] = [
-      '#markup' => '<p>' . $this->t('Configure retention settings for individual flags. These settings override the global defaults.') . '</p>',
+      '#markup' => '<div class="messages messages--status">' . 
+        '<p><strong>' . $this->t('Flag Retention Settings') . '</strong></p>' .
+        '<p>' . $this->t('Configure retention settings for individual flags. Use the "Enable retention" checkbox to activate retention policies for specific flags. Only enabled flags will have their old flaggings automatically cleaned up during cron runs.') . '</p>' .
+        '</div>',
     ];
 
     $flags_with_settings = $this->retentionManager->getAllFlagsWithSettings();
@@ -67,6 +70,7 @@ class FlagRetentionFlagSettingsForm extends FormBase {
         $this->t('Retention (days)'),
         $this->t('Auto-clear'),
         $this->t('Current count'),
+        $this->t('Enable retention'),
       ],
       '#empty' => $this->t('No flags available.'),
     ];
@@ -92,6 +96,11 @@ class FlagRetentionFlagSettingsForm extends FormBase {
         '#step' => 1,
         '#size' => 8,
         '#field_suffix' => $this->t('days (0 = keep forever)'),
+        '#states' => [
+          'enabled' => [
+            ':input[name="flags[' . $flag_id . '][enabled]"]' => ['checked' => TRUE],
+          ],
+        ],
       ];
 
       $form['flags'][$flag_id]['auto_clear'] = [
@@ -99,10 +108,22 @@ class FlagRetentionFlagSettingsForm extends FormBase {
         '#default_value' => $data['auto_clear'],
         '#title' => $this->t('Enable automatic cleanup'),
         '#title_display' => 'invisible',
+        '#states' => [
+          'enabled' => [
+            ':input[name="flags[' . $flag_id . '][enabled]"]' => ['checked' => TRUE],
+          ],
+        ],
       ];
 
       $form['flags'][$flag_id]['current_count'] = [
         '#markup' => number_format($current_count),
+      ];
+
+      $form['flags'][$flag_id]['enabled'] = [
+        '#type' => 'checkbox',
+        '#default_value' => $data['retention_days'] > 0 || $data['auto_clear'] > 0,
+        '#title' => $this->t('Enable retention for this flag'),
+        '#title_display' => 'invisible',
       ];
     }
 
@@ -128,8 +149,9 @@ class FlagRetentionFlagSettingsForm extends FormBase {
 
     foreach ($values['flags'] as $flag_id => $settings) {
       if (is_array($settings)) {
-        $retention_days = (int) $settings['retention_days'];
-        $auto_clear = (int) $settings['auto_clear'];
+        $enabled = (int) $settings['enabled'];
+        $retention_days = $enabled ? (int) $settings['retention_days'] : 0;
+        $auto_clear = $enabled ? (int) $settings['auto_clear'] : 0;
         
         $this->retentionManager->saveRetentionSettings($flag_id, $retention_days, $auto_clear);
         $saved_count++;
