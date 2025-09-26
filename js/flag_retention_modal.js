@@ -3,7 +3,7 @@
  * Flag Retention modal JavaScript.
  */
 
-(function ($, Drupal) {
+(function ($, Drupal, once) {
 
   'use strict';
 
@@ -70,8 +70,8 @@
       }
 
       // Enhance form elements within modals
-      $('.ui-dialog.flag-retention-modal .form-item', context).once('flag-retention-modal-enhance').each(function () {
-        var $item = $(this);
+      once('flag-retention-modal-enhance', '.ui-dialog.flag-retention-modal .form-item', context).forEach(function (element) {
+        var $item = $(element);
         
         // Add better styling to checkboxes
         $item.find('input[type="checkbox"]').each(function () {
@@ -85,11 +85,16 @@
       });
 
       // Auto-focus first form element in flag retention modals
-      $('.ui-dialog.flag-retention-modal .form-element:first', context).once('flag-retention-focus').focus();
+      once('flag-retention-focus', '.ui-dialog.flag-retention-modal', context).forEach(function (dialogElement) {
+        var firstFormElement = $(dialogElement).find('.form-element').first();
+        if (firstFormElement.length > 0) {
+          firstFormElement.focus();
+        }
+      });
 
       // Handle "Select All" functionality for checkboxes
-      $('.flag-retention-modal-form', context).once('flag-retention-select-all').each(function () {
-        var $form = $(this);
+      once('flag-retention-select-all', '.flag-retention-modal-form', context).forEach(function (element) {
+        var $form = $(element);
         var $checkboxes = $form.find('input[type="checkbox"][name^="flags["]');
         
         if ($checkboxes.length > 3) {
@@ -137,4 +142,4 @@
     };
   }
 
-})(jQuery, Drupal);
+})(jQuery, Drupal, once);
