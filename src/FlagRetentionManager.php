@@ -7,6 +7,7 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\flag\FlagServiceInterface;
+use Drupal\flag_retention\FlagClearer;
 
 /**
  * Flag retention manager service.
@@ -49,14 +50,22 @@ class FlagRetentionManager {
   protected $time;
 
   /**
+   * The flag clearer service.
+   *
+   * @var \Drupal\flag_retention\FlagClearer
+   */
+  protected $flagClearer;
+
+  /**
    * Constructs a FlagRetentionManager object.
    */
-  public function __construct(Connection $database, ConfigFactoryInterface $config_factory, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time) {
+  public function __construct(Connection $database, ConfigFactoryInterface $config_factory, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, FlagClearer $flag_clearer) {
     $this->database = $database;
     $this->configFactory = $config_factory;
     $this->flagService = $flag_service;
     $this->loggerFactory = $logger_factory;
     $this->time = $time;
+    $this->flagClearer = $flag_clearer;
   }
 
   /**
@@ -242,8 +251,7 @@ class FlagRetentionManager {
     $expired_flagging_ids = $this->getExpiredFlags($batch_size);
 
     if (!empty($expired_flagging_ids)) {
-      $clearer = \Drupal::service('flag_retention.clearer');
-      $deleted_count = $clearer->deleteFlaggingsByIds($expired_flagging_ids);
+      $deleted_count = $this->flagClearer->deleteFlaggingsByIds($expired_flagging_ids);
 
       if ($config->get('log_clearing_activity')) {
         $this->loggerFactory->get('flag_retention')->info(

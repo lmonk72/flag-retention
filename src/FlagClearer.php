@@ -7,6 +7,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\flag\FlagServiceInterface;
 
@@ -60,15 +61,23 @@ class FlagClearer {
   protected $currentUser;
 
   /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a FlagClearer object.
    */
-  public function __construct(Connection $database, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, MessengerInterface $messenger, AccountProxyInterface $current_user) {
+  public function __construct(Connection $database, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, MessengerInterface $messenger, AccountProxyInterface $current_user, EntityTypeManagerInterface $entity_type_manager) {
     $this->database = $database;
     $this->flagService = $flag_service;
     $this->loggerFactory = $logger_factory;
     $this->time = $time;
     $this->messenger = $messenger;
     $this->currentUser = $current_user;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -173,7 +182,7 @@ class FlagClearer {
     try {
       // Use Drupal's entity storage to properly delete flaggings
       // This ensures all hooks and events are triggered properly.
-      $storage = \Drupal::entityTypeManager()->getStorage('flagging');
+      $storage = $this->entityTypeManager->getStorage('flagging');
       $flaggings = $storage->loadMultiple($flagging_ids);
 
       if (!empty($flaggings)) {
