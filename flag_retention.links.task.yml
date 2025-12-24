@@ -1,0 +1,5 @@
+flag_retention.user_clear:
+  title: 'Clear Flags'
+  route_name: flag_retention.user_clear
+  base_route: entity.user.canonical
+  weight: 10

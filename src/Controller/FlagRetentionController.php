@@ -29,18 +29,19 @@ class FlagRetentionController extends ControllerBase {
       return AccessResult::forbidden('User clearing is disabled.');
     }
 
-    // Check permissions.
-    if (!$account->hasPermission('clear own flags') && !$account->hasPermission('clear all flags')) {
-      return AccessResult::forbidden('User lacks permission to clear flags.');
-    }
-
     // If no user specified, allow (form will handle default).
     if (!$user) {
       return AccessResult::allowed();
     }
 
+    // Convert to integer for comparison.
+    $user_id = is_numeric($user) ? (int) $user : NULL;
+    if (!$user_id) {
+      return AccessResult::forbidden('Invalid user ID.');
+    }
+
     // Users can clear their own flags, admins can clear any flags.
-    if ($user === (int) $account->id() || $account->hasPermission('clear all flags')) {
+    if ($user_id == $account->id() || $account->hasPermission('clear all flags')) {
       return AccessResult::allowed();
     }
 
