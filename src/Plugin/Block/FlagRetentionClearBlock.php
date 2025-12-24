@@ -160,7 +160,12 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
         $flag = $flag_service->getFlagById($flag_id);
         if ($flag) {
           $count = $data->count;
-          $summary_items[] = \Drupal\Component\Utility\Html::escape($flag->label() . ': ' . $count . ' ' . ($count == 1 ? $item_term_singular : $item_term_plural));
+          // Use t() with @placeholder for proper escaping of dynamic content
+          $summary_items[] = $this->t('@flag_name: @count @items', [
+            '@flag_name' => $flag->label(),
+            '@count' => $count,
+            '@items' => $count == 1 ? $item_term_singular : $item_term_plural,
+          ]);
         }
       }
 

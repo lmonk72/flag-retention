@@ -126,7 +126,11 @@ class UserClearForm extends FormBase {
       $flag = $flag_service->getFlagById($flag_id);
       if ($flag) {
         $flag_labels[$flag_id] = $flag->label();
-        $options[$flag_id] = $flag->label() . ' (' . $data->count . ' items)';
+        // Use translate function for proper string escaping of dynamic content
+        $options[$flag_id] = $this->t('@flag_name (@count items)', [
+          '@flag_name' => $flag->label(),
+          '@count' => $data->count,
+        ]);
         $total_flags += $data->count;
       }
     }
@@ -169,7 +173,11 @@ class UserClearForm extends FormBase {
       // Update options to use custom terminology
       foreach ($options as $flag_id => &$option) {
         $count = $flag_counts[$flag_id]->count;
-        $option = $flag_labels[$flag_id] . ' (' . $count . ' ' . ($count == 1 ? $item_term_singular : $item_term_plural) . ')';
+        $option = $this->t('@flag_name (@count @items)', [
+          '@flag_name' => $flag_labels[$flag_id],
+          '@count' => $count,
+          '@items' => $count == 1 ? $item_term_singular : $item_term_plural,
+        ]);
       }
 
       $form['flags'] = [

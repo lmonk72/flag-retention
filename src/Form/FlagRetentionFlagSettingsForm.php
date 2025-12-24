@@ -82,7 +82,7 @@ class FlagRetentionFlagSettingsForm extends FormBase {
       $current_count = isset($stats[$flag_id]) ? $stats[$flag_id]->total_count : 0;
 
       $form['flags'][$flag_id]['name'] = [
-        '#markup' => '<strong>' . $flag->label() . '</strong><br><small>' . $flag_id . '</small>',
+        '#markup' => '<strong>' . $this->t('@flag_name', ['@flag_name' => $flag->label()]) . '</strong><br><small>' . $this->t('@flag_id', ['@flag_id' => $flag_id]) . '</small>',
       ];
 
       $form['flags'][$flag_id]['description'] = [

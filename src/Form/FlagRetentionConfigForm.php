@@ -131,7 +131,10 @@ class FlagRetentionConfigForm extends ConfigFormBase {
     } else {
       $flag_options = [];
       foreach ($all_flags as $flag_id => $flag) {
-        $flag_options[$flag_id] = $flag->label() . ' (' . $flag_id . ')';
+        $flag_options[$flag_id] = $this->t('@flag_name (@flag_id)', [
+          '@flag_name' => $flag->label(),
+          '@flag_id' => $flag_id,
+        ]);
       }
 
       $form['flag_access']['enabled_flags'] = [
