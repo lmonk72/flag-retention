@@ -4,6 +4,7 @@ namespace Drupal\flag_retention\Form;
 
 use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Url;
 use Drupal\flag_retention\FlagClearer;
 use Drupal\flag\FlagServiceInterface;
@@ -36,11 +37,19 @@ class AdminFlagClearForm extends ConfirmFormBase {
   protected $flagId;
 
   /**
+   * The flood service for rate limiting.
+   *
+   * @var \Drupal\Core\Flood\FloodInterface
+   */
+  protected $flood;
+
+  /**
    * Constructs a new AdminFlagClearForm object.
    */
-  public function __construct(FlagClearer $flag_clearer, FlagServiceInterface $flag_service) {
+  public function __construct(FlagClearer $flag_clearer, FlagServiceInterface $flag_service, FloodInterface $flood) {
     $this->flagClearer = $flag_clearer;
     $this->flagService = $flag_service;
+    $this->flood = $flood;
   }
 
   /**
@@ -49,7 +58,8 @@ class AdminFlagClearForm extends ConfirmFormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('flag_retention.clearer'),
-      $container->get('flag')
+      $container->get('flag'),
+      $container->get('flood')
     );
   }
 
@@ -88,7 +98,7 @@ class AdminFlagClearForm extends ConfirmFormBase {
 
     $form['info'] = [
       '#type' => 'item',
-      '#markup' => '<div class="messages messages--warning">' . 
+      '#markup' => '<div class="messages messages--warning">' .
         $this->t('You are about to clear <strong>@count flags</strong> of type "<strong>@flag_name</strong>" affecting <strong>@users users</strong>.', [
           '@count' => number_format($current_count),
           '@flag_name' => $flag->label(),
@@ -127,8 +137,16 @@ class AdminFlagClearForm extends ConfirmFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Rate limit admin clear attempts by user.
+    $uid = $this->currentUser()->id();
+    if (!$this->flood->isAllowed('flag_retention_admin_clear', 5, 300, $uid)) {
+      $this->messenger()->addError($this->t('Too many clear attempts. Please try again later.'));
+      return;
+    }
+    $this->flood->register('flag_retention_admin_clear', 300, $uid);
+
     $cleared_count = $this->flagClearer->clearAllFlagsByType($this->flagId);
-    
+
     $flag = $this->flagService->getFlagById($this->flagId);
     $flag_name = $flag ? $flag->label() : $this->flagId;
 

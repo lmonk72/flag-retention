@@ -4,6 +4,8 @@ namespace Drupal\flag_retention\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Flood\FloodInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\flag_retention\FlagClearer;
 use Drupal\flag\FlagServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -28,11 +30,27 @@ class BulkFlagClearForm extends FormBase {
   protected $flagService;
 
   /**
+   * The flood service for rate limiting.
+   *
+   * @var \Drupal\Core\Flood\FloodInterface
+   */
+  protected $flood;
+
+  /**
+   * The current user.
+   *
+   * @var \Drupal\Core\Session\AccountProxyInterface
+   */
+  protected $currentUser;
+
+  /**
    * Constructs a new BulkFlagClearForm object.
    */
-  public function __construct(FlagClearer $flag_clearer, FlagServiceInterface $flag_service) {
+  public function __construct(FlagClearer $flag_clearer, FlagServiceInterface $flag_service, FloodInterface $flood, AccountProxyInterface $current_user) {
     $this->flagClearer = $flag_clearer;
     $this->flagService = $flag_service;
+    $this->flood = $flood;
+    $this->currentUser = $current_user;
   }
 
   /**
@@ -41,7 +59,9 @@ class BulkFlagClearForm extends FormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('flag_retention.clearer'),
-      $container->get('flag')
+      $container->get('flag'),
+      $container->get('flood'),
+      $container->get('current_user')
     );
   }
 
@@ -172,6 +192,13 @@ class BulkFlagClearForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Rate limit by user to prevent spamming clears.
+    if (!$this->flood->isAllowed('flag_retention_bulk_clear', 3, 300, $this->currentUser->id())) {
+      $this->messenger()->addError($this->t('Too many bulk clear attempts. Please try again later.'));
+      return;
+    }
+    $this->flood->register('flag_retention_bulk_clear', 300, $this->currentUser->id());
+
     $operation = $form_state->getValue('operation');
     $total_cleared = 0;
 

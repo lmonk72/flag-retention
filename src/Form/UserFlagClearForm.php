@@ -4,6 +4,7 @@ namespace Drupal\flag_retention\Form;
 
 use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Url;
 use Drupal\flag_retention\FlagClearer;
 use Drupal\flag\FlagServiceInterface;
@@ -37,11 +38,19 @@ class UserFlagClearForm extends ConfirmFormBase {
   protected $user;
 
   /**
+   * The flood service for rate limiting.
+   *
+   * @var \Drupal\Core\Flood\FloodInterface
+   */
+  protected $flood;
+
+  /**
    * Constructs a new UserFlagClearForm object.
    */
-  public function __construct(FlagClearer $flag_clearer, FlagServiceInterface $flag_service) {
+  public function __construct(FlagClearer $flag_clearer, FlagServiceInterface $flag_service, FloodInterface $flood) {
     $this->flagClearer = $flag_clearer;
     $this->flagService = $flag_service;
+    $this->flood = $flood;
   }
 
   /**
@@ -50,7 +59,8 @@ class UserFlagClearForm extends ConfirmFormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('flag_retention.clearer'),
-      $container->get('flag')
+      $container->get('flag'),
+      $container->get('flood')
     );
   }
 
@@ -153,6 +163,13 @@ class UserFlagClearForm extends ConfirmFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    $uid = $this->currentUser()->id();
+    if (!$this->flood->isAllowed('flag_retention_user_flag_clear', 5, 300, $uid)) {
+      $this->messenger()->addError($this->t('Too many flag clearing attempts. Please try again later.'));
+      return;
+    }
+    $this->flood->register('flag_retention_user_flag_clear', 300, $uid);
+
     $clear_all = $form_state->getValue('clear_all');
     $selected_flags = array_filter($form_state->getValue('selected_flags', []));
 

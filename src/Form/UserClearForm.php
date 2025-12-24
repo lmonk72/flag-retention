@@ -10,6 +10,7 @@ use Drupal\Core\Ajax\MessageCommand;
 use Drupal\Core\Ajax\RedirectCommand;
 use Drupal\Core\Ajax\SettingsCommand;
 use Drupal\Core\Form\FormBase;
+use Drupal\Core\Flood\FloodInterface;
 use Drupal\flag_retention\Ajax\RefreshPageCommand;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
@@ -53,13 +54,21 @@ class UserClearForm extends FormBase {
   protected $requestStack;
 
   /**
+   * The flood service for rate limiting.
+   *
+   * @var \Drupal\Core\Flood\FloodInterface
+   */
+  protected $flood;
+
+  /**
    * Constructs a new UserClearForm.
    */
-  public function __construct(FlagClearer $flag_clearer, AccountInterface $current_user, MessengerInterface $messenger, RequestStack $request_stack) {
+  public function __construct(FlagClearer $flag_clearer, AccountInterface $current_user, MessengerInterface $messenger, RequestStack $request_stack, FloodInterface $flood) {
     $this->flagClearer = $flag_clearer;
     $this->currentUser = $current_user;
     $this->messenger = $messenger;
     $this->requestStack = $request_stack;
+    $this->flood = $flood;
   }
 
   /**
@@ -70,7 +79,8 @@ class UserClearForm extends FormBase {
       $container->get('flag_retention.clearer'),
       $container->get('current_user'),
       $container->get('messenger'),
-      $container->get('request_stack')
+      $container->get('request_stack'),
+      $container->get('flood')
     );
   }
 
@@ -258,6 +268,11 @@ class UserClearForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
+    if (!$this->flood->isAllowed('flag_retention_clear', 5, 300, $this->currentUser->id())) {
+      $form_state->setErrorByName('actions', $this->t('Too many flag clearing attempts. Please try again later.'));
+      return;
+    }
+
     // Handle single flag case
     if ($single_flag = $form_state->getValue('single_flag')) {
       // Check if single flag is allowed
@@ -293,6 +308,9 @@ class UserClearForm extends FormBase {
     if ($this->isAjaxRequest()) {
       return;
     }
+
+    // Register the attempt for rate limiting.
+    $this->flood->register('flag_retention_clear', 300, $this->currentUser->id());
 
     $user_id = $form_state->getValue('user_id');
     $total_cleared = 0;
@@ -353,6 +371,9 @@ class UserClearForm extends FormBase {
     // Process the clearing logic directly here
     $user_id = $form_state->getValue('user_id');
     $total_cleared = 0;
+
+    // Register the attempt for rate limiting (validated earlier).
+    $this->flood->register('flag_retention_clear', 300, $this->currentUser->id());
 
     // Handle single flag case
     if ($single_flag = $form_state->getValue('single_flag')) {
