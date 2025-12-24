@@ -1,0 +1,34 @@
+flag_retention.settings:
+  type: config_object
+  label: 'Flag Retention Settings'
+  mapping:
+    global_retention_days:
+      type: integer
+      label: 'Default retention period in days'
+    enable_user_clearing:
+      type: boolean
+      label: 'Enable user flag clearing'
+    log_clearing_activity:
+      type: boolean
+      label: 'Log clearing activity'
+    cron_batch_size:
+      type: integer
+      label: 'Cron batch size'
+    item_term_singular:
+      type: string
+      label: 'Singular term for items'
+    item_term_plural:
+      type: string
+      label: 'Plural term for items'
+    clear_action_term:
+      type: string
+      label: 'Action term for clearing'
+    enabled_flags:
+      type: sequence
+      label: 'Enabled flags for user clearing'
+      sequence:
+        type: string
+        label: 'Flag ID'
+    flag_access_mode:
+      type: string
+      label: 'Flag access control mode'
