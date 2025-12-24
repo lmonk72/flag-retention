@@ -76,7 +76,7 @@ class UserFlagClearForm extends ConfirmFormBase {
 
     // Get user's flag counts.
     $flag_counts = $this->flagClearer->getUserFlagCount($user->id());
-    
+
     if (empty($flag_counts)) {
       $form['no_flags'] = [
         '#markup' => '<p>' . $this->t('You have no flags to clear.') . '</p>',
@@ -102,8 +102,8 @@ class UserFlagClearForm extends ConfirmFormBase {
       if (isset($flags[$flag_id])) {
         $flag = $flags[$flag_id];
         $count = $data->count;
-        $options[$flag_id] = sprintf('%s (%d flags)', $flag->label(), $count);
-        $descriptions[] = sprintf('<strong>%s:</strong> %d flags', $flag->label(), $count);
+        $options[$flag_id] = \Drupal\Component\Utility\Html::escape('%s (%d flags)', $flag->label(), $count);
+        $descriptions[] = \Drupal\Component\Utility\Html::escape('<strong>%s:</strong> %d flags', $flag->label(), $count);
       }
     }
 
@@ -155,7 +155,7 @@ class UserFlagClearForm extends ConfirmFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $clear_all = $form_state->getValue('clear_all');
     $selected_flags = array_filter($form_state->getValue('selected_flags', []));
-    
+
     $total_cleared = 0;
 
     if ($clear_all) {
@@ -169,7 +169,7 @@ class UserFlagClearForm extends ConfirmFormBase {
         $cleared = $this->flagClearer->clearUserFlags($this->user->id(), $flag_id);
         $total_cleared += $cleared;
       }
-      
+
       $this->messenger()->addMessage(
         $this->t('Cleared @count flags.', ['@count' => $total_cleared])
       );

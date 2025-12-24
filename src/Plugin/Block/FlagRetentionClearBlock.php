@@ -130,11 +130,11 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
    */
   public function build() {
     $build = [];
-    
+
     // Get user's flag counts.
     $flag_counts = $this->flagClearer->getUserFlagCount($this->currentUser->id());
     $total_flags = 0;
-    
+
     foreach ($flag_counts as $data) {
       $total_flags += $data->count;
     }
@@ -155,15 +155,15 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     if ($this->configuration['show_summary'] && !empty($flag_counts)) {
       $flag_service = \Drupal::service('flag');
       $summary_items = [];
-      
+
       foreach ($flag_counts as $flag_id => $data) {
         $flag = $flag_service->getFlagById($flag_id);
         if ($flag) {
           $count = $data->count;
-          $summary_items[] = $flag->label() . ': ' . $count . ' ' . ($count == 1 ? $item_term_singular : $item_term_plural);
+          $summary_items[] = \Drupal\Component\Utility\Html::escape($flag->label() . ': ' . $count . ' ' . ($count == 1 ? $item_term_singular : $item_term_plural));
         }
       }
-      
+
       if (!empty($summary_items)) {
         $build['summary'] = [
           '#theme' => 'item_list',
@@ -187,7 +187,7 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     // Add the clear button.
     $button_text = $this->configuration['button_text'];
     $url = Url::fromRoute('flag_retention.user_clear', ['user' => $this->currentUser->id()]);
-    
+
     $attributes = [
       'class' => explode(' ', $this->configuration['button_class']),
       'title' => $this->t('Clear all your @items', ['@items' => $item_term_plural]),
@@ -198,7 +198,7 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     // Add modal support if enabled
     if ($this->configuration['use_modal']) {
       $clear_action_term = $config->get('clear_action_term') ?: 'Clear';
-      
+
       $attributes['class'][] = 'use-ajax';
       $attributes['data-dialog-type'] = 'modal';
       $attributes['data-dialog-options'] = json_encode([
@@ -212,7 +212,7 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
       $libraries[] = 'core/drupal.dialog.ajax';
       $libraries[] = 'flag_retention/flag_retention_modal';
     }
-    
+
     $build['clear_button'] = [
       '#type' => 'link',
       '#title' => $button_text,
@@ -232,11 +232,11 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
    */
   protected function blockAccess(AccountInterface $account) {
     $config = \Drupal::config('flag_retention.settings');
-    
+
     if (!$config->get('enable_user_clearing') || !$account->hasPermission('clear own flags')) {
       return AccessResult::forbidden();
     }
-    
+
     return AccessResult::allowed();
   }
 
