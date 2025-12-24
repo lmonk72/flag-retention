@@ -171,7 +171,7 @@ class FlagRetentionManager {
     if (!is_string($flag_id) || empty($flag_id) || strlen($flag_id) > 255) {
       return FALSE;
     }
-    
+
     // Match Drupal machine name pattern
     return preg_match('/^[a-z0-9_]+$/', $flag_id) === 1;
   }

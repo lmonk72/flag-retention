@@ -5,6 +5,8 @@ namespace Drupal\flag_retention;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\flag\FlagServiceInterface;
 
@@ -12,6 +14,8 @@ use Drupal\flag\FlagServiceInterface;
  * Flag clearer service.
  */
 class FlagClearer {
+
+  use StringTranslationTrait;
 
   /**
    * The database connection.
@@ -49,14 +53,22 @@ class FlagClearer {
   protected $messenger;
 
   /**
+   * The current user.
+   *
+   * @var \Drupal\Core\Session\AccountProxyInterface
+   */
+  protected $currentUser;
+
+  /**
    * Constructs a FlagClearer object.
    */
-  public function __construct(Connection $database, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, MessengerInterface $messenger) {
+  public function __construct(Connection $database, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, MessengerInterface $messenger, AccountProxyInterface $current_user) {
     $this->database = $database;
     $this->flagService = $flag_service;
     $this->loggerFactory = $logger_factory;
     $this->time = $time;
     $this->messenger = $messenger;
+    $this->currentUser = $current_user;
   }
 
   /**
@@ -158,10 +170,17 @@ class FlagClearer {
       }
     }
     catch (\Exception $e) {
-      $this->loggerFactory->get('flag_retention')->error(
-        'Error deleting flaggings: @message',
-        ['@message' => $e->getMessage()]
-      );
+      if ($this->currentUser->hasPermission('administer flags')) {
+        $this->loggerFactory->get('flag_retention')->error(
+          'Error deleting flaggings: @message',
+          ['@message' => $e->getMessage()]
+        );
+      }
+      else {
+        $this->loggerFactory->get('flag_retention')->error('Error deleting flaggings.');
+      }
+      // Provide a generic message to the end user without leaking details.
+      $this->messenger->addError($this->t('An unexpected error occurred while deleting flags. Please try again later.'));
       return 0;
     }
 

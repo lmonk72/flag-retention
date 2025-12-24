@@ -197,7 +197,7 @@ class FlagRetentionConfigForm extends ConfigFormBase {
 
     foreach ($terminology_fields as $field_name => $field_label) {
       $value = trim($form_state->getValue($field_name, ''));
-      
+
       // Check not empty
       if (empty($value)) {
         $form_state->setErrorByName(
