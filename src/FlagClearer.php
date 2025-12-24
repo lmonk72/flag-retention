@@ -109,14 +109,6 @@ class FlagClearer {
    * Clear all flags of a specific type for a specific user.
    */
   public function clearUserFlags($user_id, $flag_id = NULL) {
-    // Permission guard: allow general admins or per-flag permission when a flag is specified.
-    if ($flag_id) {
-      $has_flag_permission = $this->currentUser->hasPermission('clear flags of type ' . $flag_id) || $this->currentUser->hasPermission('clear all flags');
-      $has_own_permission = ($this->currentUser->id() === (int) $user_id) && $this->currentUser->hasPermission('clear own flags');
-      if (!$has_flag_permission && !$has_own_permission) {
-        return 0;
-      }
-    }
     $query = $this->database->select('flagging', 'f')
       ->fields('f', ['id'])
       ->condition('uid', $user_id);
@@ -143,9 +135,6 @@ class FlagClearer {
    * Clear all flags of a specific type.
    */
   public function clearAllFlagsByType($flag_id) {
-    if (!$this->currentUser->hasPermission('clear all flags') && !$this->currentUser->hasPermission('clear flags of type ' . $flag_id)) {
-      return 0;
-    }
     // Validate flag_id to ensure it exists and is valid.
     $flag = $this->flagService->getFlagById($flag_id);
     if (!$flag) {
@@ -178,9 +167,6 @@ class FlagClearer {
    * Clear old flags based on age.
    */
   public function clearOldFlags($flag_id, $days_old) {
-    if (!$this->currentUser->hasPermission('clear all flags') && !$this->currentUser->hasPermission('clear flags of type ' . $flag_id)) {
-      return 0;
-    }
     // Validate flag_id to ensure it exists and is valid.
     $flag = $this->flagService->getFlagById($flag_id);
     if (!$flag) {
@@ -376,15 +362,11 @@ class FlagClearer {
     $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
 
     if ($access_mode === 'allow_all') {
-      return $this->currentUser->hasPermission('clear all flags') || $this->currentUser->hasPermission('clear flags of type ' . $flag_id);
+      return TRUE;
     }
 
     $enabled_flags = $config->get('enabled_flags') ?: [];
-    if (!in_array($flag_id, $enabled_flags)) {
-      return FALSE;
-    }
-
-    return $this->currentUser->hasPermission('clear all flags') || $this->currentUser->hasPermission('clear flags of type ' . $flag_id);
+    return in_array($flag_id, $enabled_flags);
   }
 
   /**
