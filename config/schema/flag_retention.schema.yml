@@ -15,13 +15,13 @@ flag_retention.settings:
       type: integer
       label: 'Cron batch size'
     item_term_singular:
-      type: string
+      type: label
       label: 'Singular term for items'
     item_term_plural:
-      type: string
+      type: label
       label: 'Plural term for items'
     clear_action_term:
-      type: string
+      type: label
       label: 'Action term for clearing'
     enabled_flags:
       type: sequence
@@ -33,5 +33,5 @@ flag_retention.settings:
       type: string
       label: 'Flag access control mode'
     user_clear_label:
-      type: string
+      type: label
       label: 'User clear tab label'
