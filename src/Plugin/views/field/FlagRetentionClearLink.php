@@ -198,6 +198,10 @@ class FlagRetentionClearLink extends FieldPluginBase {
       '#attributes' => [
         'class' => ['flag-retention-clear-link', 'flag-retention-' . $link_type],
         'title' => $this->t('Clear flags for @user', ['@user' => $user->label()]),
+        'aria-label' => $this->t('Clear @count flags for @user', [
+          '@count' => $total_flags,
+          '@user' => $user->getDisplayName(),
+        ]),
       ],
       '#attached' => ['library' => ['flag_retention/flag_retention']],
     ];

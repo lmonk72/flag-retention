@@ -18,6 +18,89 @@
   };
 
   /**
+   * Helper namespace for flag retention utilities.
+   */
+  Drupal.flagRetention = Drupal.flagRetention || {};
+
+  /**
+   * Initialize keyboard navigation for modal dialogs.
+   * Implements focus trapping and Escape key handling.
+   */
+  Drupal.flagRetention.initKeyboardNavigation = function($dialog) {
+    if (!$dialog || !$dialog.length) {
+      return;
+    }
+
+    // Store the element that triggered the modal
+    var $triggerElement = $(document.activeElement);
+    $dialog.data('trigger-element', $triggerElement);
+
+    // Get all focusable elements within the dialog
+    var focusableSelectors = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    var getFocusableElements = function() {
+      return $dialog.find(focusableSelectors).filter(':visible');
+    };
+
+    // Handle Escape key to close modal
+    var escapeHandler = function(e) {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        var $closeButton = $dialog.find('.ui-dialog-titlebar-close');
+        if ($closeButton.length) {
+          $closeButton.trigger('click');
+        }
+        e.preventDefault();
+      }
+    };
+
+    // Handle Tab key for focus trapping
+    var tabHandler = function(e) {
+      if (e.key !== 'Tab' && e.keyCode !== 9) {
+        return;
+      }
+
+      var $focusableElements = getFocusableElements();
+
+      if ($focusableElements.length === 0) {
+        return;
+      }
+
+      var firstElement = $focusableElements.first()[0];
+      var lastElement = $focusableElements.last()[0];
+
+      // Shift + Tab on first element: go to last
+      if (e.shiftKey && document.activeElement === firstElement) {
+        lastElement.focus();
+        e.preventDefault();
+      }
+      // Tab on last element: go to first
+      else if (!e.shiftKey && document.activeElement === lastElement) {
+        firstElement.focus();
+        e.preventDefault();
+      }
+    };
+
+    // Attach keyboard handlers
+    $dialog.on('keydown.flagRetentionModal', function(e) {
+      escapeHandler(e);
+      tabHandler(e);
+    });
+
+    // Return focus when dialog closes
+    $dialog.on('dialogclose', function() {
+      var $trigger = $dialog.data('trigger-element');
+      if ($trigger && $trigger.length) {
+        setTimeout(function() {
+          $trigger.focus();
+        }, 100);
+      }
+      // Clean up event handlers
+      $dialog.off('keydown.flagRetentionModal');
+      $dialog.off('dialogclose');
+    });
+  };
+
+  /**
    * Modal-specific behaviors for flag retention.
    */
   Drupal.behaviors.flagRetentionModal = {
@@ -40,6 +123,8 @@
             // Add custom class to identify flag retention modals
             setTimeout(function () {
               $('.ui-dialog:last').addClass('flag-retention-modal');
+              // Initialize keyboard navigation for the modal
+              Drupal.flagRetention.initKeyboardNavigation($('.ui-dialog:last'));
             }, 50);
           }
         });
@@ -55,6 +140,10 @@
             if ($dialog.length) {
               $dialog.find('.ui-dialog-content').addClass('flag-retention-success');
             }
+            // Announce success to screen readers (Issue #5)
+            if (typeof Drupal.flagRetention !== 'undefined' && typeof Drupal.flagRetention.announce === 'function') {
+              Drupal.flagRetention.announce(Drupal.t('Flags successfully cleared'));
+            }
           }
         });
 
@@ -63,17 +152,24 @@
           if (settings.url && settings.url.includes('flag-clear')) {
             console.warn('Flag retention AJAX error:', xhr);
 
+            var errorMessage;
             // Handle CSRF token expiration (403 Forbidden)
             if (xhr.status === 403) {
               alert(Drupal.t('Your session has expired. Please refresh the page and try again.'));
             }
             // Handle permission issues
             else if (xhr.status === 403) {
-              alert(Drupal.t('You do not have permission to clear flags.'));
+              errorMessage = Drupal.t('You do not have permission to clear flags.');
+              alert(errorMessage);
             }
             // Handle other errors
             else {
-              alert(Drupal.t('An error occurred while clearing flags. Please try again.'));
+              errorMessage = Drupal.t('An error occurred while clearing flags. Please try again.');
+              alert(errorMessage);
+            }
+            // Announce error to screen readers (Issue #5)
+            if (typeof Drupal.flagRetention !== 'undefined' && typeof Drupal.flagRetention.announce === 'function') {
+              Drupal.flagRetention.announce(errorMessage, 'assertive');
             }
           }
         });
@@ -109,9 +205,13 @@
 
       // Auto-focus first form element in flag retention modals
       once('flag-retention-focus', '.ui-dialog.flag-retention-modal', context).forEach(function (dialogElement) {
-        var firstFormElement = $(dialogElement).find('.form-element').first();
+        var $dialog = $(dialogElement);
+        var firstFormElement = $dialog.find('.form-element, input, button, select, textarea').filter(':visible').first();
         if (firstFormElement.length > 0) {
-          firstFormElement.focus();
+          // Delay focus slightly to ensure modal is fully rendered
+          setTimeout(function() {
+            firstFormElement.focus();
+          }, 100);
         }
       });
 

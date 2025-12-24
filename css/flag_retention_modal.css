@@ -3,6 +3,16 @@
  * Flag Retention modal styles.
  */
 
+/* Screen reader only content (for announcements) */
+.visually-hidden {
+  position: absolute !important;
+  clip: rect(1px, 1px, 1px, 1px);
+  overflow: hidden;
+  height: 1px;
+  width: 1px;
+  word-wrap: normal;
+}
+
 .ui-dialog.flag-retention-modal {
   max-width: 90vw;
   max-height: 90vh;
@@ -90,4 +100,42 @@
   border-left: 4px solid #27ae60;
   background-color: #f0f9f4;
   border-radius: 4px;
+}
+
+/* Focus indicators for modal elements */
+.ui-dialog.flag-retention-modal .ui-dialog-titlebar-close:focus {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.flag-retention-modal-form input:focus,
+.flag-retention-modal-form select:focus,
+.flag-retention-modal-form textarea:focus,
+.flag-retention-modal-form button:focus {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+}
+
+/* Improved color contrast for descriptions */
+.flag-retention-modal-form .description {
+  font-style: italic;
+  color: #212529;
+  margin-bottom: 1rem;
+}
+
+/* Responsive modal on mobile */
+@media (max-width: 768px) {
+  .flag-retention-modal-form {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .ui-dialog.flag-retention-modal {
+    width: 95vw !important;
+    margin: 2.5vw;
+  }
+
+  .flag-retention-modal-form .form-checkboxes {
+    max-height: 150px;
+  }
 }
