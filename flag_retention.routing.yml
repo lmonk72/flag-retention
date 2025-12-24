@@ -18,7 +18,7 @@ flag_retention.user_clear:
   path: '/user/{user}/flag-clear'
   defaults:
     _form: '\Drupal\flag_retention\Form\UserClearForm'
-    _title: 'Clear My Flags'
+    _title_callback: '\Drupal\flag_retention\Controller\FlagRetentionController::userClearTitle'
   requirements:
     _permission: 'clear own flags'
     _user_is_logged_in: 'TRUE'

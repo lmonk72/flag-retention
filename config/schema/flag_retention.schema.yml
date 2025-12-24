@@ -32,3 +32,6 @@ flag_retention.settings:
     flag_access_mode:
       type: string
       label: 'Flag access control mode'
+    user_clear_label:
+      type: string
+      label: 'User clear tab label'

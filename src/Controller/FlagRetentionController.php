@@ -48,4 +48,15 @@ class FlagRetentionController extends ControllerBase {
     return AccessResult::forbidden('User can only clear their own flags.');
   }
 
+  /**
+   * Title callback for the user clear page.
+   *
+   * @return string
+   *   The page title.
+   */
+  public function userClearTitle() {
+    $config = \Drupal::config('flag_retention.settings');
+    return $config->get('user_clear_label') ?: $this->t('Clear My Flags');
+  }
+
 }

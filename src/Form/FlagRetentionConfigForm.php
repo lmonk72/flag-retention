@@ -115,6 +115,16 @@ class FlagRetentionConfigForm extends ConfigFormBase {
       '#maxlength' => 100,
     ];
 
+    $form['terminology']['user_clear_label'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('User account tab label'),
+      '#description' => $this->t('Label used for the user account tab that links to the Clear Flags page. Default: "Clear Flags". Max 100 characters.'),
+      '#default_value' => $config->get('user_clear_label') ?: 'Clear Flags',
+      '#required' => TRUE,
+      '#size' => 30,
+      '#maxlength' => 100,
+    ];
+
     // Flag Access Control section
     $form['flag_access'] = [
       '#type' => 'details',
@@ -226,6 +236,15 @@ class FlagRetentionConfigForm extends ConfigFormBase {
         );
       }
     }
+
+    // Validate user_clear_label
+    $user_clear_label = trim($form_state->getValue('user_clear_label', ''));
+    if (empty($user_clear_label)) {
+      $form_state->setErrorByName('user_clear_label', $this->t('User account tab label cannot be empty.'));
+    }
+    if (strlen($user_clear_label) > 100) {
+      $form_state->setErrorByName('user_clear_label', $this->t('User account tab label cannot exceed 100 characters.'));
+    }
   }
 
   /**
@@ -245,9 +264,13 @@ class FlagRetentionConfigForm extends ConfigFormBase {
       ->set('item_term_singular', $form_state->getValue('item_term_singular'))
       ->set('item_term_plural', $form_state->getValue('item_term_plural'))
       ->set('clear_action_term', $form_state->getValue('clear_action_term'))
+      ->set('user_clear_label', $form_state->getValue('user_clear_label'))
       ->set('enabled_flags', $enabled_flags)
       ->set('flag_access_mode', $form_state->getValue('flag_access_mode'))
       ->save();
+
+    // Clear local task cache to reflect title change.
+    \Drupal::service('plugin.manager.menu.local_task')->clearCachedDefinitions();
   }
 
 }

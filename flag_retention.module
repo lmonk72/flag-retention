@@ -8,6 +8,7 @@
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
  * Implements hook_help().
@@ -75,4 +76,20 @@ function flag_retention_entity_operation(EntityInterface $entity) {
   }
 
   return $operations;
+}
+
+
+/**
+ * Implements hook_local_tasks_alter().
+ *
+ * Allow the admin-configured label to override the default local task title
+ * for the user clear page.
+ */
+function flag_retention_local_tasks_alter(&$local_tasks) {
+  $config = \Drupal::config('flag_retention.settings');
+  $label = $config->get('user_clear_label');
+
+  if ($label && isset($local_tasks['flag_retention.user_clear'])) {
+    $local_tasks['flag_retention.user_clear']['title'] = new TranslatableMarkup($label, []);
+  }
 }
