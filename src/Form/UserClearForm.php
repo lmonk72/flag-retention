@@ -99,12 +99,12 @@ class UserClearForm extends FormBase {
     // Get user's flag counts.
     $flag_counts = $this->flagClearer->getUserFlagCount($user);
     $total_flags = 0;
-    
+
     if (empty($flag_counts)) {
       $form['no_flags'] = [
         '#markup' => '<p>' . $this->t('You have no items to clear.') . '</p>',
       ];
-      
+
       if ($this->isAjaxRequest()) {
         $form['close'] = [
           '#type' => 'button',
@@ -114,14 +114,14 @@ class UserClearForm extends FormBase {
           ],
         ];
       }
-      
+
       return $form;
     }
 
     $flag_service = \Drupal::service('flag');
     $options = [];
     $flag_labels = [];
-    
+
     foreach ($flag_counts as $flag_id => $data) {
       $flag = $flag_service->getFlagById($flag_id);
       if ($flag) {
@@ -146,7 +146,7 @@ class UserClearForm extends FormBase {
       $flag_id = key($options);
       $flag_label = $flag_labels[$flag_id];
       $count = array_values($flag_counts)[0]->count;
-      
+
       $form['description'] = [
         '#markup' => '<p>' . $this->t('You are about to @action @count @items from @label.', [
           '@action' => $clear_action_term,
@@ -202,7 +202,7 @@ class UserClearForm extends FormBase {
 
     // Get custom terminology for button text
     $button_text = ucfirst($clear_action_term);
-    
+
     if (count($options) === 1) {
       $button_text .= ' ' . ucfirst($item_term_plural);
     } else {
@@ -232,7 +232,7 @@ class UserClearForm extends FormBase {
         'callback' => '::submitAjaxForm',
         'wrapper' => 'flag-retention-user-clear-form',
       ];
-      
+
       $form['actions']['cancel'] = [
         '#type' => 'button',
         '#value' => $this->t('Cancel'),
@@ -266,9 +266,9 @@ class UserClearForm extends FormBase {
       }
       return;
     }
-    
+
     $selected_flags = array_filter($form_state->getValue('flags', []));
-    
+
     if (empty($selected_flags)) {
       $config = \Drupal::config('flag_retention.settings');
       $clear_action_term = $config->get('clear_action_term') ?: 'clear';
@@ -293,10 +293,10 @@ class UserClearForm extends FormBase {
     if ($this->isAjaxRequest()) {
       return;
     }
-    
+
     $user_id = $form_state->getValue('user_id');
     $total_cleared = 0;
-    
+
     // Handle single flag case
     if ($single_flag = $form_state->getValue('single_flag')) {
       $selected_flags = [$single_flag];
@@ -343,17 +343,17 @@ class UserClearForm extends FormBase {
    */
   public function submitAjaxForm(array &$form, FormStateInterface $form_state) {
     $response = new AjaxResponse();
-    
+
     if ($form_state->hasAnyErrors()) {
       // Return form with errors.
       $response->addCommand(new HtmlCommand('#flag-retention-user-clear-form', $form));
       return $response;
     }
-    
+
     // Process the clearing logic directly here
     $user_id = $form_state->getValue('user_id');
     $total_cleared = 0;
-    
+
     // Handle single flag case
     if ($single_flag = $form_state->getValue('single_flag')) {
       $selected_flags = [$single_flag];
@@ -387,17 +387,17 @@ class UserClearForm extends FormBase {
       ]);
       $message_type = 'warning';
     }
-    
+
     // Close modal and add message
     $response->addCommand(new CloseModalDialogCommand());
     $response->addCommand(new MessageCommand($message, null, ['type' => $message_type]));
-    
+
     // Add a JavaScript command to refresh the page after showing the message
     if ($total_cleared > 0) {
       // Only refresh if items were actually cleared
       $response->addCommand(new RefreshPageCommand(1500));
     }
-    
+
     return $response;
   }
 

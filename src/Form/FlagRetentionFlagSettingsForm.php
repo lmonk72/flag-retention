@@ -47,7 +47,7 @@ class FlagRetentionFlagSettingsForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['description'] = [
-      '#markup' => '<div class="messages messages--status">' . 
+      '#markup' => '<div class="messages messages--status">' .
         '<p><strong>' . $this->t('Flag Retention Settings') . '</strong></p>' .
         '<p>' . $this->t('Configure retention settings for individual flags. Use the "Enable retention" checkbox to activate retention policies for specific flags. Only enabled flags will have their old flaggings automatically cleaned up during cron runs.') . '</p>' .
         '</div>',
@@ -152,7 +152,7 @@ class FlagRetentionFlagSettingsForm extends FormBase {
         $enabled = (int) $settings['enabled'];
         $retention_days = $enabled ? (int) $settings['retention_days'] : 0;
         $auto_clear = $enabled ? (int) $settings['auto_clear'] : 0;
-        
+
         $this->retentionManager->saveRetentionSettings($flag_id, $retention_days, $auto_clear);
         $saved_count++;
       }

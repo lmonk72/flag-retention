@@ -62,7 +62,7 @@ class BulkFlagClearForm extends FormBase {
 
     $flags = $this->flagService->getAllFlags();
     $flag_options = [];
-    
+
     foreach ($flags as $flag) {
       $stats = $this->flagClearer->getFlagStatistics($flag->id());
       $count = isset($stats[$flag->id()]) ? $stats[$flag->id()]->total_count : 0;
@@ -148,7 +148,7 @@ class BulkFlagClearForm extends FormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $operation = $form_state->getValue('operation');
-    
+
     if ($operation === 'by_flag') {
       $selected_flags = array_filter($form_state->getValue('selected_flags', []));
       if (empty($selected_flags)) {
@@ -160,7 +160,7 @@ class BulkFlagClearForm extends FormBase {
       if (empty($flag_for_age)) {
         $form_state->setErrorByName('flag_for_age', $this->t('Please select a flag type for age-based clearing.'));
       }
-      
+
       $days_old = $form_state->getValue('days_old');
       if (!$days_old || $days_old < 1) {
         $form_state->setErrorByName('days_old', $this->t('Please enter a valid number of days (minimum 1).'));
@@ -177,12 +177,12 @@ class BulkFlagClearForm extends FormBase {
 
     if ($operation === 'by_flag') {
       $selected_flags = array_filter($form_state->getValue('selected_flags', []));
-      
+
       foreach ($selected_flags as $flag_id) {
         $cleared = $this->flagClearer->clearAllFlagsByType($flag_id);
         $total_cleared += $cleared;
       }
-      
+
       $this->messenger()->addMessage(
         $this->t('Cleared @count flags across @flag_count flag types.', [
           '@count' => $total_cleared,
@@ -193,13 +193,13 @@ class BulkFlagClearForm extends FormBase {
     elseif ($operation === 'by_age') {
       $flag_id = $form_state->getValue('flag_for_age');
       $days_old = $form_state->getValue('days_old');
-      
+
       $cleared = $this->flagClearer->clearOldFlags($flag_id, $days_old);
       $total_cleared = $cleared;
-      
+
       $flag = $this->flagService->getFlagById($flag_id);
       $flag_name = $flag ? $flag->label() : $flag_id;
-      
+
       $this->messenger()->addMessage(
         $this->t('Cleared @count flags of type "@flag_name" older than @days days.', [
           '@count' => $cleared,
