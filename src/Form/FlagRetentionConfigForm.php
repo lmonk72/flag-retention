@@ -41,9 +41,10 @@ class FlagRetentionConfigForm extends ConfigFormBase {
     $form['global_settings']['global_retention_days'] = [
       '#type' => 'number',
       '#title' => $this->t('Default retention period (days)'),
-      '#description' => $this->t('Default number of days to keep flags. Set to 0 to keep forever. This applies to flags without specific retention settings.'),
+      '#description' => $this->t('Default number of days to keep flags. Set to 0 to keep forever. Valid range: 0-3650 days. This applies to flags without specific retention settings.'),
       '#default_value' => $config->get('global_retention_days'),
       '#min' => 0,
+      '#max' => 3650,
       '#step' => 1,
     ];
 
@@ -87,28 +88,31 @@ class FlagRetentionConfigForm extends ConfigFormBase {
     $form['terminology']['item_term_singular'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Singular term for items'),
-      '#description' => $this->t('What to call a single flagged item (e.g., "item", "bookmark", "favorite"). Default: "item"'),
+      '#description' => $this->t('What to call a single flagged item (e.g., "item", "bookmark", "favorite"). Default: "item". Max 100 characters.'),
       '#default_value' => $config->get('item_term_singular') ?: 'item',
       '#required' => TRUE,
       '#size' => 30,
+      '#maxlength' => 100,
     ];
 
     $form['terminology']['item_term_plural'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Plural term for items'),
-      '#description' => $this->t('What to call multiple flagged items (e.g., "items", "bookmarks", "favorites"). Default: "items"'),
+      '#description' => $this->t('What to call multiple flagged items (e.g., "items", "bookmarks", "favorites"). Default: "items". Max 100 characters.'),
       '#default_value' => $config->get('item_term_plural') ?: 'items',
       '#required' => TRUE,
       '#size' => 30,
+      '#maxlength' => 100,
     ];
 
     $form['terminology']['clear_action_term'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Action term for clearing'),
-      '#description' => $this->t('The action word for clearing items (e.g., "clear", "remove", "delete"). Default: "clear"'),
+      '#description' => $this->t('The action word for clearing items (e.g., "clear", "remove", "delete"). Default: "clear". Max 100 characters.'),
       '#default_value' => $config->get('clear_action_term') ?: 'clear',
       '#required' => TRUE,
       '#size' => 30,
+      '#maxlength' => 100,
     ];
 
     // Flag Access Control section
@@ -158,6 +162,70 @@ class FlagRetentionConfigForm extends ConfigFormBase {
     }
 
     return parent::buildForm($form, $form_state);
+  }
+
+  /**
+   * Validates form input for retention configuration.
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    // Validate retention_days is within acceptable range
+    $global_retention_days = $form_state->getValue('global_retention_days');
+    if ($global_retention_days !== null && ($global_retention_days < 0 || $global_retention_days > 3650)) {
+      $form_state->setErrorByName(
+        'global_retention_days',
+        $this->t('Retention days must be between 0 and 3650. Provided value: @value', ['@value' => $global_retention_days])
+      );
+    }
+
+    // Validate cron batch size
+    $cron_batch_size = $form_state->getValue('cron_batch_size');
+    if ($cron_batch_size !== null && ($cron_batch_size < 1 || $cron_batch_size > 1000)) {
+      $form_state->setErrorByName(
+        'cron_batch_size',
+        $this->t('Cron batch size must be between 1 and 1000. Provided value: @value', ['@value' => $cron_batch_size])
+      );
+    }
+
+    // Validate terminology fields are not empty and have reasonable length
+    $terminology_fields = [
+      'item_term_singular' => 'Singular term',
+      'item_term_plural' => 'Plural term',
+      'clear_action_term' => 'Action term',
+    ];
+
+    foreach ($terminology_fields as $field_name => $field_label) {
+      $value = trim($form_state->getValue($field_name, ''));
+      
+      // Check not empty
+      if (empty($value)) {
+        $form_state->setErrorByName(
+          $field_name,
+          $this->t('@label cannot be empty.', ['@label' => $field_label])
+        );
+        continue;
+      }
+
+      // Check length
+      if (strlen($value) > 100) {
+        $form_state->setErrorByName(
+          $field_name,
+          $this->t('@label cannot exceed 100 characters. Current length: @length', [
+            '@label' => $field_label,
+            '@length' => strlen($value),
+          ])
+        );
+      }
+
+      // Check for valid characters (alphanumeric, spaces, hyphens, underscores)
+      if (!preg_match('/^[a-zA-Z0-9\s\-_\.]+$/', $value)) {
+        $form_state->setErrorByName(
+          $field_name,
+          $this->t('@label can only contain letters, numbers, spaces, hyphens, underscores, and periods.', ['@label' => $field_label])
+        );
+      }
+    }
   }
 
   /**

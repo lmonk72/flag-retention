@@ -83,8 +83,44 @@ class FlagRetentionManager {
 
   /**
    * Save retention settings for a flag.
+   *
+   * @param string $flag_id
+   *   The flag ID (must be a valid Drupal machine name).
+   * @param int $retention_days
+   *   Number of days to retain flags (0-3650).
+   * @param int $auto_clear
+   *   Whether to automatically clear expired flags (0 or 1).
+   *
+   * @return bool
+   *   TRUE if settings were saved successfully.
+   *
+   * @throws \InvalidArgumentException
+   *   If parameters are invalid.
    */
   public function saveRetentionSettings($flag_id, $retention_days, $auto_clear = 0) {
+    // Validate flag_id format (must be a valid Drupal machine name)
+    if (!$this->isValidFlagId($flag_id)) {
+      throw new \InvalidArgumentException(
+        sprintf('Invalid flag_id format: %s. Must be lowercase alphanumeric with underscores.', $flag_id)
+      );
+    }
+
+    // Validate retention_days is within acceptable range
+    if (!is_numeric($retention_days) || $retention_days < 0 || $retention_days > 3650) {
+      throw new \InvalidArgumentException(
+        sprintf('Invalid retention_days: %s. Must be between 0 and 3650.', $retention_days)
+      );
+    }
+    $retention_days = (int) $retention_days;
+
+    // Validate auto_clear is boolean-like
+    if (!in_array($auto_clear, [0, 1])) {
+      throw new \InvalidArgumentException(
+        sprintf('Invalid auto_clear value: %s. Must be 0 or 1.', $auto_clear)
+      );
+    }
+    $auto_clear = (int) $auto_clear;
+
     $current_time = $this->time->getRequestTime();
 
     // Check if settings already exist.
@@ -119,6 +155,25 @@ class FlagRetentionManager {
     }
 
     return TRUE;
+  }
+
+  /**
+   * Validates if a flag_id is in a valid Drupal machine name format.
+   *
+   * @param string $flag_id
+   *   The flag ID to validate.
+   *
+   * @return bool
+   *   TRUE if valid, FALSE otherwise.
+   */
+  protected function isValidFlagId($flag_id) {
+    // Drupal machine names: lowercase alphanumeric and underscore, 1-255 chars
+    if (!is_string($flag_id) || empty($flag_id) || strlen($flag_id) > 255) {
+      return FALSE;
+    }
+    
+    // Match Drupal machine name pattern
+    return preg_match('/^[a-z0-9_]+$/', $flag_id) === 1;
   }
 
   /**

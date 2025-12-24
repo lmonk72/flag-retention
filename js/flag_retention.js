@@ -54,7 +54,10 @@
    * Theme function for flag retention confirmation dialogs.
    */
   Drupal.theme.flagRetentionConfirm = function (message) {
-    return '<div class="flag-retention-confirm-dialog">' + message + '</div>';
+    var div = document.createElement('div');
+    div.className = 'flag-retention-confirm-dialog';
+    div.textContent = message;  // Safely escape message via textContent
+    return div;
   };
 
 })(jQuery, Drupal, once);
