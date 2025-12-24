@@ -85,7 +85,7 @@ class BulkFlagClearForm extends FormBase {
 
     foreach ($flags as $flag) {
       $stats = $this->flagClearer->getFlagStatistics($flag->id());
-      $count = isset($stats[$flag->id()]) ? $stats[$flag->id()]->total_count : 0;
+      $count = is_object($stats) && isset($stats->total_count) ? $stats->total_count : 0;
       // Use t() with @placeholder instead of sprintf for proper XSS escaping
       $flag_options[$flag->id()] = $this->t('@flag_name (@count flags)', [
         '@flag_name' => $flag->label(),
