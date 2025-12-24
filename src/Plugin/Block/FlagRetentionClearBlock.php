@@ -177,7 +177,7 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     // Show total count if enabled.
     if ($this->configuration['show_count']) {
       $build['count'] = [
-        '#markup' => '<p><strong>' . $this->t('Total @items: @count', [
+        '#markup' => '<p id="flag-count-description"><strong>' . $this->t('Total @items: @count', [
           '@items' => $total_flags == 1 ? $item_term_singular : $item_term_plural,
           '@count' => $total_flags,
         ]) . '</strong></p>',
@@ -191,6 +191,12 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
     $attributes = [
       'class' => explode(' ', $this->configuration['button_class']),
       'title' => $this->t('Clear all your @items', ['@items' => $item_term_plural]),
+      'aria-label' => $this->t('Clear all @count @items for @user', [
+        '@count' => $total_flags,
+        '@items' => $total_flags == 1 ? $item_term_singular : $item_term_plural,
+        '@user' => $this->currentUser->getDisplayName(),
+      ]),
+      'aria-describedby' => $this->configuration['show_count'] ? 'flag-count-description' : NULL,
     ];
 
     $libraries = ['flag_retention/flag_retention'];

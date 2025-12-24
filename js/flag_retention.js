@@ -47,4 +47,23 @@
     return '<div class="flag-retention-confirm-dialog">' + message + '</div>';
   };
 
+  /**
+   * Helper to announce messages to screen readers (Issue #5).
+   */
+  Drupal.flagRetention = Drupal.flagRetention || {};
+  
+  Drupal.flagRetention.announce = function(message, priority) {
+    if (typeof Drupal.announce === 'function') {
+      Drupal.announce(message, priority);
+    } else {
+      // Fallback for older Drupal versions
+      var $liveRegion = $('#drupal-live-announce');
+      if (!$liveRegion.length) {
+        $liveRegion = $('<div id="drupal-live-announce" aria-live="polite" aria-atomic="true" class="visually-hidden"></div>');
+        $('body').append($liveRegion);
+      }
+      $liveRegion.text(message);
+    }
+  };
+
 })(jQuery, Drupal, once);
