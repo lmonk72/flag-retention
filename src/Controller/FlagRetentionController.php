@@ -40,7 +40,7 @@ class FlagRetentionController extends ControllerBase {
     }
 
     // Users can clear their own flags, admins can clear any flags.
-    if ($user == $account->id() || $account->hasPermission('clear all flags')) {
+    if ($user === (int) $account->id() || $account->hasPermission('clear all flags')) {
       return AccessResult::allowed();
     }
 
