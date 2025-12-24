@@ -5,4 +5,4 @@ services:
 
   flag_retention.clearer:
     class: Drupal\flag_retention\FlagClearer
-    arguments: ['@database', '@flag', '@logger.factory', '@datetime.time', '@messenger', '@current_user', '@entity_type.manager']
+    arguments: ['@database', '@flag', '@logger.factory', '@datetime.time', '@messenger', '@current_user', '@entity_type.manager', '@cache_tags.invalidator', '@config.factory']

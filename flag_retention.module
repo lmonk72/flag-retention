@@ -8,6 +8,7 @@
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
+use Drupal\flag\FlagServiceInterface;
 
 /**
  * Implements hook_help().
@@ -17,6 +18,26 @@ function flag_retention_help($route_name, RouteMatchInterface $route_match) {
     case 'help.page.flag_retention':
       return '<p>' . t('This module provides retention policies and clearing functionality for flags. It allows you to set automatic retention periods for different flag types and provides tools for users and administrators to clear flags.') . '</p>';
   }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function flag_retention_permission() {
+  $permissions = [];
+
+  /** @var \Drupal\flag\FlagServiceInterface $flag_service */
+  $flag_service = \Drupal::service('flag');
+
+  foreach ($flag_service->getAllFlags() as $flag) {
+    $id = $flag->id();
+    $permissions['clear flags of type ' . $id] = [
+      'title' => t('Clear flags of type @flag', ['@flag' => $flag->label()]),
+      'description' => t('Allow clearing of flags for the @flag flag type.', ['@flag' => $flag->label()]),
+    ];
+  }
+
+  return $permissions;
 }
 
 /**
@@ -57,15 +78,15 @@ function flag_retention_views_data() {
  */
 function flag_retention_entity_operation(EntityInterface $entity) {
   $operations = [];
-  
+
   if ($entity->getEntityTypeId() === 'user' && $entity->id() > 0) {
     $current_user = \Drupal::currentUser();
     $config = \Drupal::config('flag_retention.settings');
-    
+
     // Only show the link if user clearing is enabled and user has permission.
-    if ($config->get('enable_user_clearing') && 
+    if ($config->get('enable_user_clearing') &&
         ($current_user->hasPermission('clear own flags') || $current_user->hasPermission('clear all flags'))) {
-      
+
       $operations['clear_flags'] = [
         'title' => t('Clear flags'),
         'url' => Url::fromRoute('flag_retention.user_clear', ['user' => $entity->id()]),
@@ -73,6 +94,6 @@ function flag_retention_entity_operation(EntityInterface $entity) {
       ];
     }
   }
-  
+
   return $operations;
 }

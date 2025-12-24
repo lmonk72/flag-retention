@@ -3,6 +3,8 @@
 namespace Drupal\flag_retention;
 
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
@@ -68,9 +70,30 @@ class FlagClearer {
   protected $entityTypeManager;
 
   /**
+   * Cache tags invalidator.
+   *
+   * @var \Drupal\Core\Cache\CacheTagsInvalidatorInterface
+   */
+  protected $cacheTagsInvalidator;
+
+  /**
+   * Config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a FlagClearer object.
    */
-  public function __construct(Connection $database, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, MessengerInterface $messenger, AccountProxyInterface $current_user, EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(Connection $database, FlagServiceInterface $flag_service, LoggerChannelFactoryInterface $logger_factory, TimeInterface $time, MessengerInterface $messenger, AccountProxyInterface $current_user, EntityTypeManagerInterface $entity_type_manager, CacheTagsInvalidatorInterface $cache_tags_invalidator, ConfigFactoryInterface $config_factory) {
     $this->database = $database;
     $this->flagService = $flag_service;
     $this->loggerFactory = $logger_factory;
@@ -78,12 +101,22 @@ class FlagClearer {
     $this->messenger = $messenger;
     $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
+    $this->cacheTagsInvalidator = $cache_tags_invalidator;
+    $this->configFactory = $config_factory;
   }
 
   /**
    * Clear all flags of a specific type for a specific user.
    */
   public function clearUserFlags($user_id, $flag_id = NULL) {
+    // Permission guard: allow general admins or per-flag permission when a flag is specified.
+    if ($flag_id) {
+      $has_flag_permission = $this->currentUser->hasPermission('clear flags of type ' . $flag_id) || $this->currentUser->hasPermission('clear all flags');
+      $has_own_permission = ($this->currentUser->id() === (int) $user_id) && $this->currentUser->hasPermission('clear own flags');
+      if (!$has_flag_permission && !$has_own_permission) {
+        return 0;
+      }
+    }
     $query = $this->database->select('flagging', 'f')
       ->fields('f', ['id'])
       ->condition('uid', $user_id);
@@ -98,6 +131,7 @@ class FlagClearer {
       $deleted = $this->deleteFlaggingsByIds($flagging_ids);
       if ($deleted > 0) {
         $this->logAudit($flag_id, $deleted, 'user_clear', $this->currentUser->id(), $user_id);
+        $this->invalidateFlagCaches($flag_id);
       }
       return $deleted;
     }
@@ -109,6 +143,9 @@ class FlagClearer {
    * Clear all flags of a specific type.
    */
   public function clearAllFlagsByType($flag_id) {
+    if (!$this->currentUser->hasPermission('clear all flags') && !$this->currentUser->hasPermission('clear flags of type ' . $flag_id)) {
+      return 0;
+    }
     // Validate flag_id to ensure it exists and is valid.
     $flag = $this->flagService->getFlagById($flag_id);
     if (!$flag) {
@@ -129,6 +166,7 @@ class FlagClearer {
       $deleted = $this->deleteFlaggingsByIds($flagging_ids);
       if ($deleted > 0) {
         $this->logAudit($flag_id, $deleted, 'admin_clear_all', $this->currentUser->id());
+        $this->invalidateFlagCaches($flag_id);
       }
       return $deleted;
     }
@@ -140,6 +178,9 @@ class FlagClearer {
    * Clear old flags based on age.
    */
   public function clearOldFlags($flag_id, $days_old) {
+    if (!$this->currentUser->hasPermission('clear all flags') && !$this->currentUser->hasPermission('clear flags of type ' . $flag_id)) {
+      return 0;
+    }
     // Validate flag_id to ensure it exists and is valid.
     $flag = $this->flagService->getFlagById($flag_id);
     if (!$flag) {
@@ -164,6 +205,7 @@ class FlagClearer {
       $deleted = $this->deleteFlaggingsByIds($flagging_ids);
       if ($deleted > 0) {
         $this->logAudit($flag_id, $deleted, 'age_clear', $this->currentUser->id());
+        $this->invalidateFlagCaches($flag_id);
       }
       return $deleted;
     }
@@ -313,7 +355,7 @@ class FlagClearer {
    * Get list of allowed flags based on admin configuration.
    */
   public function getAllowedFlags() {
-    $config = \Drupal::config('flag_retention.settings');
+    $config = $this->configFactory->get('flag_retention.settings');
     $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
 
     if ($access_mode === 'allow_all') {
@@ -330,15 +372,39 @@ class FlagClearer {
    * Check if a specific flag is allowed to be cleared.
    */
   public function isFlagAllowed($flag_id) {
-    $config = \Drupal::config('flag_retention.settings');
+    $config = $this->configFactory->get('flag_retention.settings');
     $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
 
     if ($access_mode === 'allow_all') {
-      return TRUE;
+      return $this->currentUser->hasPermission('clear all flags') || $this->currentUser->hasPermission('clear flags of type ' . $flag_id);
     }
 
     $enabled_flags = $config->get('enabled_flags') ?: [];
-    return in_array($flag_id, $enabled_flags);
+    if (!in_array($flag_id, $enabled_flags)) {
+      return FALSE;
+    }
+
+    return $this->currentUser->hasPermission('clear all flags') || $this->currentUser->hasPermission('clear flags of type ' . $flag_id);
+  }
+
+  /**
+   * Invalidate cache tags for flag data after deletions.
+   *
+   * @param string|null $flag_id
+   *   Flag ID to target cache tags for, if available.
+   */
+  protected function invalidateFlagCaches($flag_id = NULL) {
+    $tags = ['flag_retention'];
+
+    if ($flag_id) {
+      $flag = $this->flagService->getFlagById($flag_id);
+      if ($flag) {
+        $tags = array_merge($tags, $flag->getCacheTags());
+      }
+      $tags[] = 'flag_retention:' . $flag_id;
+    }
+
+    $this->cacheTagsInvalidator->invalidateTags(array_unique($tags));
   }
 
 }
