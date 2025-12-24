@@ -64,6 +64,60 @@ function flag_retention_schema() {
     ],
   ];
 
+  $schema['flag_retention_audit'] = [
+    'description' => 'Stores an audit trail of flag deletion operations.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique audit record ID.',
+      ],
+      'flag_id' => [
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => FALSE,
+        'description' => 'The flag ID affected (if applicable).',
+      ],
+      'count' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Number of flaggings affected by the operation.',
+      ],
+      'operation' => [
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Operation type (e.g., user_clear, admin_clear_all, age_clear).',
+      ],
+      'performed_by' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'User ID that initiated the operation (0 for system).',
+      ],
+      'target_uid' => [
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'User ID whose flags were affected (if applicable).',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp when the audit record was created.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'flag_id' => ['flag_id'],
+      'performed_by' => ['performed_by'],
+      'target_uid' => ['target_uid'],
+      'created' => ['created'],
+    ],
+  ];
+
   return $schema;
 }
 

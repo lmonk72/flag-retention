@@ -86,7 +86,11 @@ class FlagClearer {
     $flagging_ids = $query->execute()->fetchCol();
 
     if (!empty($flagging_ids)) {
-      return $this->deleteFlaggingsByIds($flagging_ids);
+      $deleted = $this->deleteFlaggingsByIds($flagging_ids);
+      if ($deleted > 0) {
+        $this->logAudit($flag_id, $deleted, 'user_clear', $this->currentUser->id(), $user_id);
+      }
+      return $deleted;
     }
 
     return 0;
@@ -113,7 +117,11 @@ class FlagClearer {
       ->fetchCol();
 
     if (!empty($flagging_ids)) {
-      return $this->deleteFlaggingsByIds($flagging_ids);
+      $deleted = $this->deleteFlaggingsByIds($flagging_ids);
+      if ($deleted > 0) {
+        $this->logAudit($flag_id, $deleted, 'admin_clear_all', $this->currentUser->id());
+      }
+      return $deleted;
     }
 
     return 0;
@@ -144,7 +152,11 @@ class FlagClearer {
       ->fetchCol();
 
     if (!empty($flagging_ids)) {
-      return $this->deleteFlaggingsByIds($flagging_ids);
+      $deleted = $this->deleteFlaggingsByIds($flagging_ids);
+      if ($deleted > 0) {
+        $this->logAudit($flag_id, $deleted, 'age_clear', $this->currentUser->id());
+      }
+      return $deleted;
     }
 
     return 0;
@@ -185,6 +197,39 @@ class FlagClearer {
     }
 
     return 0;
+  }
+
+  /**
+   * Record an audit entry for flag deletion operations.
+   *
+   * @param string|null $flag_id
+   *   The flag ID affected (if applicable).
+   * @param int $count
+   *   Number of flaggings deleted.
+   * @param string $operation
+   *   Operation code (e.g., user_clear, admin_clear_all, age_clear).
+   * @param int $performed_by
+   *   User ID who initiated the operation (0 for system).
+   * @param int|null $target_uid
+   *   User ID whose flags were affected, if applicable.
+   */
+  protected function logAudit($flag_id, $count, $operation, $performed_by, $target_uid = NULL) {
+    try {
+      $this->database->insert('flag_retention_audit')
+        ->fields([
+          'flag_id' => $flag_id,
+          'count' => (int) $count,
+          'operation' => $operation,
+          'performed_by' => (int) $performed_by,
+          'target_uid' => isset($target_uid) ? (int) $target_uid : NULL,
+          'created' => $this->time->getRequestTime(),
+        ])
+        ->execute();
+    }
+    catch (\Exception $e) {
+      // Silently ignore audit write failures to avoid blocking clears.
+      $this->loggerFactory->get('flag_retention')->warning('Failed to write flag retention audit record: @message', ['@message' => $e->getMessage()]);
+    }
   }
 
   /**
