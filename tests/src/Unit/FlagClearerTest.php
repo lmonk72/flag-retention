@@ -201,4 +201,92 @@ class FlagClearerTest extends TestCase {
     $this->assertEquals(0, $result);
   }
 
+  /**
+   * Tests clearAllFlagsByType validates flag_id exists.
+   *
+   * @covers ::clearAllFlagsByType
+   */
+  public function testClearAllFlagsByTypeValidatesFlagId() {
+    $flag_id = 'nonexistent_flag';
+
+    // Mock flag service to return null for nonexistent flag
+    $this->flagService->expects($this->once())
+      ->method('getFlagById')
+      ->with($flag_id)
+      ->willReturn(NULL);
+
+    // Mock logger to verify warning is logged
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->once())
+      ->method('warning')
+      ->with('Attempted to clear flags for unknown flag_id: @flag_id', ['@flag_id' => $flag_id]);
+
+    $this->loggerFactory->expects($this->once())
+      ->method('get')
+      ->with('flag_retention')
+      ->willReturn($logger);
+
+    $result = $this->clearer->clearAllFlagsByType($flag_id);
+    $this->assertEquals(0, $result);
+  }
+
+  /**
+   * Tests clearOldFlags validates flag_id exists.
+   *
+   * @covers ::clearOldFlags
+   */
+  public function testClearOldFlagsValidatesFlagId() {
+    $flag_id = 'nonexistent_flag';
+    $days_old = 30;
+
+    // Mock flag service to return null for nonexistent flag
+    $this->flagService->expects($this->once())
+      ->method('getFlagById')
+      ->with($flag_id)
+      ->willReturn(NULL);
+
+    // Mock logger to verify warning is logged
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->once())
+      ->method('warning')
+      ->with('Attempted to clear old flags for unknown flag_id: @flag_id', ['@flag_id' => $flag_id]);
+
+    $this->loggerFactory->expects($this->once())
+      ->method('get')
+      ->with('flag_retention')
+      ->willReturn($logger);
+
+    $result = $this->clearer->clearOldFlags($flag_id, $days_old);
+    $this->assertEquals(0, $result);
+  }
+
+  /**
+   * Tests getFlagStatistics validates flag_id exists.
+   *
+   * @covers ::getFlagStatistics
+   */
+  public function testGetFlagStatisticsValidatesFlagId() {
+    $flag_id = 'nonexistent_flag';
+
+    // Mock flag service to return null for nonexistent flag
+    $this->flagService->expects($this->once())
+      ->method('getFlagById')
+      ->with($flag_id)
+      ->willReturn(NULL);
+
+    // Mock logger to verify warning is logged
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->once())
+      ->method('warning')
+      ->with('Attempted to get statistics for unknown flag_id: @flag_id', ['@flag_id' => $flag_id]);
+
+    $this->loggerFactory->expects($this->once())
+      ->method('get')
+      ->with('flag_retention')
+      ->willReturn($logger);
+
+    $result = $this->clearer->getFlagStatistics($flag_id);
+    $this->assertEquals([], $result);
+  }
+
 }

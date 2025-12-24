@@ -84,6 +84,16 @@ class FlagClearer {
    * Clear all flags of a specific type.
    */
   public function clearAllFlagsByType($flag_id) {
+    // Validate flag_id to ensure it exists and is valid.
+    $flag = $this->flagService->getFlagById($flag_id);
+    if (!$flag) {
+      $this->loggerFactory->get('flag_retention')->warning(
+        'Attempted to clear flags for unknown flag_id: @flag_id',
+        ['@flag_id' => $flag_id]
+      );
+      return 0;
+    }
+
     $flagging_ids = $this->database->select('flagging', 'f')
       ->fields('f', ['id'])
       ->condition('flag_id', $flag_id)
@@ -101,6 +111,16 @@ class FlagClearer {
    * Clear old flags based on age.
    */
   public function clearOldFlags($flag_id, $days_old) {
+    // Validate flag_id to ensure it exists and is valid.
+    $flag = $this->flagService->getFlagById($flag_id);
+    if (!$flag) {
+      $this->loggerFactory->get('flag_retention')->warning(
+        'Attempted to clear old flags for unknown flag_id: @flag_id',
+        ['@flag_id' => $flag_id]
+      );
+      return 0;
+    }
+
     $current_time = $this->time->getRequestTime();
     $cutoff_time = $current_time - ($days_old * 24 * 60 * 60);
 
@@ -131,7 +151,7 @@ class FlagClearer {
       // This ensures all hooks and events are triggered properly.
       $storage = \Drupal::entityTypeManager()->getStorage('flagging');
       $flaggings = $storage->loadMultiple($flagging_ids);
-      
+
       if (!empty($flaggings)) {
         $storage->delete($flaggings);
         return count($flaggings);
@@ -152,6 +172,18 @@ class FlagClearer {
    * Get flag statistics.
    */
   public function getFlagStatistics($flag_id = NULL) {
+    // Validate flag_id if provided.
+    if ($flag_id) {
+      $flag = $this->flagService->getFlagById($flag_id);
+      if (!$flag) {
+        $this->loggerFactory->get('flag_retention')->warning(
+          'Attempted to get statistics for unknown flag_id: @flag_id',
+          ['@flag_id' => $flag_id]
+        );
+        return [];
+      }
+    }
+
     $query = $this->database->select('flagging', 'f');
     $query->addExpression('COUNT(f.id)', 'total_count');
     $query->addExpression('COUNT(DISTINCT f.uid)', 'unique_users');
@@ -210,12 +242,12 @@ class FlagClearer {
   public function getAllowedFlags() {
     $config = \Drupal::config('flag_retention.settings');
     $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
-    
+
     if ($access_mode === 'allow_all') {
       // Return empty array to indicate all flags are allowed
       return [];
     }
-    
+
     // Only allow selected flags
     $enabled_flags = $config->get('enabled_flags') ?: [];
     return array_values($enabled_flags);
@@ -227,11 +259,11 @@ class FlagClearer {
   public function isFlagAllowed($flag_id) {
     $config = \Drupal::config('flag_retention.settings');
     $access_mode = $config->get('flag_access_mode') ?: 'allow_all';
-    
+
     if ($access_mode === 'allow_all') {
       return TRUE;
     }
-    
+
     $enabled_flags = $config->get('enabled_flags') ?: [];
     return in_array($flag_id, $enabled_flags);
   }

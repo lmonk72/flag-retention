@@ -147,13 +147,13 @@ class FlagRetentionManagerTest extends TestCase {
     $this->database->method('select')->willReturn($query);
 
     $result = $this->manager->getRetentionSettings($flag_id);
-    
+
     $expected = [
       'flag_id' => $flag_id,
       'retention_days' => 0,
       'auto_clear' => 0,
     ];
-    
+
     $this->assertEquals($expected, $result);
   }
 
@@ -237,9 +237,53 @@ class FlagRetentionManagerTest extends TestCase {
       ->willReturnOnConsecutiveCalls($query1, $query2);
 
     $result = $this->manager->getExpiredFlags(10);
-    
+
     $this->assertIsArray($result);
     $this->assertLessThanOrEqual(10, count($result));
+  }
+
+  /**
+   * Tests getExpiredFlags validates flag_id exists.
+   *
+   * @covers ::getExpiredFlags
+   */
+  public function testGetExpiredFlagsValidatesFlagId() {
+    $current_time = 1000000;
+    $this->time->method('getRequestTime')->willReturn($current_time);
+
+    // Mock settings query to return flags with retention settings
+    $statement1 = $this->createMock(StatementInterface::class);
+    $statement1->method('fetchAllKeyed')
+      ->willReturn(['nonexistent_flag' => 30]);
+
+    $query1 = $this->createMock(Select::class);
+    $query1->method('fields')->willReturnSelf();
+    $query1->method('condition')->willReturnSelf();
+    $query1->method('execute')->willReturn($statement1);
+
+    // Mock getAllFlags to return empty list (nonexistent flag)
+    $this->flagService->method('getAllFlags')
+      ->willReturn([]);
+
+    // Mock logger to verify warning is logged
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->once())
+      ->method('warning')
+      ->with('Skipping expired flags query for unknown flag: @flag_id', ['@flag_id' => 'nonexistent_flag']);
+
+    $this->loggerFactory->expects($this->once())
+      ->method('get')
+      ->with('flag_retention')
+      ->willReturn($logger);
+
+    $this->database->expects($this->once())
+      ->method('select')
+      ->willReturn($query1);
+
+    $result = $this->manager->getExpiredFlags(100);
+
+    // Should return empty array since the flag was invalid
+    $this->assertEquals([], $result);
   }
 
 }

@@ -86,7 +86,7 @@ class FlagRetentionManager {
    */
   public function saveRetentionSettings($flag_id, $retention_days, $auto_clear = 0) {
     $current_time = $this->time->getRequestTime();
-    
+
     // Check if settings already exist.
     $existing = $this->database->select('flag_retention_settings', 'frs')
       ->fields('frs', ['id'])
@@ -126,7 +126,7 @@ class FlagRetentionManager {
    */
   public function getExpiredFlags($limit = 100) {
     $current_time = $this->time->getRequestTime();
-    
+
     // Get all flags with auto-clear enabled and retention period > 0.
     $flags_with_settings = $this->database->select('flag_retention_settings', 'frs')
       ->fields('frs', ['flag_id', 'retention_days'])
@@ -139,11 +139,24 @@ class FlagRetentionManager {
       return [];
     }
 
+    // Get all valid flags for validation.
+    $all_flags = $this->flagService->getAllFlags();
+    $valid_flag_ids = array_keys($all_flags);
+
     $expired_flaggings = [];
-    
+
     foreach ($flags_with_settings as $flag_id => $retention_days) {
+      // Validate flag_id to ensure it's a known flag before querying.
+      if (!in_array($flag_id, $valid_flag_ids)) {
+        $this->loggerFactory->get('flag_retention')->warning(
+          'Skipping expired flags query for unknown flag: @flag_id',
+          ['@flag_id' => $flag_id]
+        );
+        continue;
+      }
+
       $cutoff_time = $current_time - ($retention_days * 24 * 60 * 60);
-      
+
       $flaggings = $this->database->select('flagging', 'f')
         ->fields('f', ['id'])
         ->condition('flag_id', $flag_id)
@@ -153,7 +166,7 @@ class FlagRetentionManager {
         ->fetchCol();
 
       $expired_flaggings = array_merge($expired_flaggings, $flaggings);
-      
+
       // Respect the batch limit.
       if (count($expired_flaggings) >= $limit) {
         $expired_flaggings = array_slice($expired_flaggings, 0, $limit);
@@ -170,13 +183,13 @@ class FlagRetentionManager {
   public function processCronCleanup() {
     $config = $this->configFactory->get('flag_retention.settings');
     $batch_size = $config->get('cron_batch_size') ?: 100;
-    
+
     $expired_flagging_ids = $this->getExpiredFlags($batch_size);
-    
+
     if (!empty($expired_flagging_ids)) {
       $clearer = \Drupal::service('flag_retention.clearer');
       $deleted_count = $clearer->deleteFlaggingsByIds($expired_flagging_ids);
-      
+
       if ($config->get('log_clearing_activity')) {
         $this->loggerFactory->get('flag_retention')->info(
           'Cron cleanup deleted @count expired flaggings.',
@@ -192,18 +205,18 @@ class FlagRetentionManager {
   public function getAllFlagsWithSettings() {
     $flags = $this->flagService->getAllFlags();
     $result = [];
-    
+
     foreach ($flags as $flag) {
       $flag_id = $flag->id();
       $settings = $this->getRetentionSettings($flag_id);
-      
+
       $result[$flag_id] = [
         'flag' => $flag,
         'retention_days' => $settings['retention_days'] ?? 0,
         'auto_clear' => $settings['auto_clear'] ?? 0,
       ];
     }
-    
+
     return $result;
   }
 
