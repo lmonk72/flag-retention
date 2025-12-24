@@ -186,6 +186,16 @@ class FlagRetentionClearBlock extends BlockBase implements ContainerFactoryPlugi
 
     // Add the clear button.
     $button_text = $this->configuration['button_text'];
+    
+    // Make button text more descriptive if show_count is enabled (Issue #9)
+    if ($this->configuration['show_count']) {
+      $button_text = $this->t('@text (@count @items)', [
+        '@text' => $button_text,
+        '@count' => $total_flags,
+        '@items' => $total_flags == 1 ? $item_term_singular : $item_term_plural,
+      ]);
+    }
+    
     $url = Url::fromRoute('flag_retention.user_clear', ['user' => $this->currentUser->id()]);
     
     $attributes = [
