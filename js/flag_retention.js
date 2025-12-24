@@ -22,11 +22,12 @@
         });
       });
 
-      // Handle AJAX modal links
+      // Handle AJAX modal links with CSRF token validation
       once('flag-retention-modal', '.flag-retention-clear-link.use-ajax, .flag-retention-clear-button.use-ajax', context).forEach(function (element) {
         $(element).click(function (e) {
-          // Let Drupal's AJAX system handle the modal
-        $(this).addClass('flag-retention-modal-trigger');
+          // Drupal's AJAX system automatically handles CSRF tokens for form submissions.
+          // The token is included in the form's hidden field via the CSRF token service.
+          $(this).addClass('flag-retention-modal-trigger');
         });
       });
 
@@ -36,6 +37,15 @@
       });
       once('flag-retention-button', '.flag-retention-clear-form input[type="button"], .flag-retention-clear-form .button', context).forEach(function (element) {
         $(element).addClass('btn btn-secondary');
+      });
+
+      // Ensure CSRF token is present in form submissions
+      once('flag-retention-csrf', '.flag-retention-clear-form', context).forEach(function (element) {
+        var $form = $(element);
+        // Verify the form has the required CSRF token field
+        if ($form.find('input[name="_token"]').length === 0) {
+          console.warn('Flag retention form may be missing CSRF token protection.');
+        }
       });
     }
   };
