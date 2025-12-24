@@ -49,7 +49,7 @@
           if (settings.url && settings.url.includes('flag-clear')) {
             // Verify response headers for security
             var contentType = xhr.getResponseHeader('content-type');
-            
+
             // Custom success handling for flag clearing
             var $dialog = $('.ui-dialog.flag-retention-modal:last');
             if ($dialog.length) {
@@ -62,15 +62,15 @@
         $(document).on('ajaxError.flagRetentionModal', function (event, xhr, settings) {
           if (settings.url && settings.url.includes('flag-clear')) {
             console.warn('Flag retention AJAX error:', xhr);
-            
+
             // Handle CSRF token expiration (403 Forbidden)
             if (xhr.status === 403) {
               alert(Drupal.t('Your session has expired. Please refresh the page and try again.'));
-            } 
+            }
             // Handle permission issues
             else if (xhr.status === 403) {
               alert(Drupal.t('You do not have permission to clear flags.'));
-            } 
+            }
             // Handle other errors
             else {
               alert(Drupal.t('An error occurred while clearing flags. Please try again.'));
@@ -81,9 +81,9 @@
         // Validate CSRF token before form submission
         $(document).on('submit.flagRetentionCSRF', '.flag-retention-clear-form', function (event) {
           var $form = $(this);
-          
+
           // Check for CSRF token in the form
-          if ($form.find('input[name="_token"]').length === 0 && 
+          if ($form.find('input[name="_token"]').length === 0 &&
               $form.find('input[name="form_build_id"]').length > 0) {
             // Form likely needs CSRF token. This shouldn't happen with Drupal forms,
             // but we log it for debugging if needed.
@@ -95,7 +95,7 @@
       // Enhance form elements within modals
       once('flag-retention-modal-enhance', '.ui-dialog.flag-retention-modal .form-item', context).forEach(function (element) {
         var $item = $(element);
-        
+
         // Add better styling to checkboxes
         $item.find('input[type="checkbox"]').each(function () {
           $(this).wrap('<label class="flag-retention-checkbox-wrapper"></label>');
@@ -119,21 +119,21 @@
       once('flag-retention-select-all', '.flag-retention-modal-form', context).forEach(function (element) {
         var $form = $(element);
         var $checkboxes = $form.find('input[type="checkbox"][name^="flags["]');
-        
+
         if ($checkboxes.length > 3) {
           // Add select all/none buttons if there are many flags
           var $selectAllContainer = $('<div class="flag-retention-select-all-container"></div>');
           var $selectAll = $('<button type="button" class="btn btn-sm btn-secondary">' + Drupal.t('Select All') + '</button>');
           var $selectNone = $('<button type="button" class="btn btn-sm btn-secondary">' + Drupal.t('Select None') + '</button>');
-          
+
           $selectAllContainer.append($selectAll, ' ', $selectNone);
           $checkboxes.first().closest('.form-checkboxes').before($selectAllContainer);
-          
+
           $selectAll.click(function (e) {
             e.preventDefault();
             $checkboxes.prop('checked', true);
           });
-          
+
           $selectNone.click(function (e) {
             e.preventDefault();
             $checkboxes.prop('checked', false);
@@ -147,7 +147,7 @@
   if (typeof Drupal.dialog !== 'undefined') {
     Drupal.dialog.originalDialog = Drupal.dialog.dialog;
     Drupal.dialog.dialog = function (element, options) {
-      if ($(element).closest('.flag-retention-modal-form').length || 
+      if ($(element).closest('.flag-retention-modal-form').length ||
           (options && options.title && options.title.includes('Flag'))) {
         // Apply flag retention specific settings
         options = $.extend({
